@@ -5,6 +5,8 @@ Makefile.PL
 README
 lib/WWW/Slides.pm
 lib/WWW/Slides/Attendee.pm
+lib/WWW/Slides/Client/Base.pm
+lib/WWW/Slides/Client/TCP.pm
 lib/WWW/Slides/Controller/Multiple.pm
 lib/WWW/Slides/Controller/Single.pm
 lib/WWW/Slides/Controller/STDIO.pm
@@ -15,6 +17,7 @@ lib/WWW/Slides/SlideTracker.pm
 lib/WWW/Slides/Talk.pm
 script/console.pl
 script/webslides.pl
+script/webslides-cgi.pl
 t/00.load.t
 t/pod.t
 t/Attendee/00.load.t

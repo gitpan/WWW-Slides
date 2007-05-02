@@ -1,29 +1,155 @@
-package WWW::Slides;
+package WWW::Slides::Client::Base;
+{
 
-use version; our $VERSION = qv('0.0.2');
+   use version; our $VERSION = qv('0.0.1');
 
-use warnings;
-use strict;
-use Carp;
+   use warnings;
+   use strict;
+   use Carp;
+   use English qw( -no_match_vars );
+   use IO::Select;
 
-# Other recommended modules (uncomment to use):
-#  use IO::Prompt;
-#  use Perl6::Export;
-#  use Perl6::Slurp;
-#  use Perl6::Say;
-#  use Regexp::Autoflags;
-#  use Readonly;
+   use Object::InsideOut;
 
+   # Module implementation here
+   my @in_handle : Field    # controller handle, answers
+     : Std(Name => 'in_handle', Private => 1)
+     : Arg(Name => 'in_handle', Mandatory => 1);
+   my @out_handle : Field    # controller handle, commands
+     : Std(Name => 'out_handle', Private => 1)
+     : Arg(Name => 'out_handle', Mandatory => 1);
 
-# Module implementation here
+   sub send_command {
+      my $self = shift;
+      my ($command) = @_;
 
+      $self->get_out_handle()->print($command . "\n");
 
-1; # Magic true value required at end of module
+      my $timeout  = undef;
+      my $response = '';
+      my $in       = $self->get_in_handle();
+      my $sel      = IO::Select->new($in);
+      while ($sel->can_read($timeout)) {
+         $in->sysread(my $data, 1024);
+         if (!length $data) {
+            $self->shut_down();
+            last;
+         }
+         $response .= $data;
+         $timeout = 0.1;
+      } ## end while ($sel->can_read($timeout...
+
+      return $response;
+   } ## end sub send_command
+
+   #-------------- COMMAND EXECUTION FRAMEWORK -------------------------
+   sub _targetted : Private {
+      my $self         = shift;
+      my $base_command = shift;
+      my $target       = ' target=' . join ',', @_;
+      return $self->send_command($base_command . $target);
+   } ## end sub _targetted :
+
+   sub next {
+      my $self = shift;
+      return $self->_targetted('command=next ', @_);
+   }
+
+   sub previous {
+      my $self = shift;
+      return $self->_targetted('command=previous ', @_);
+   }
+
+   sub first {
+      my $self = shift;
+      return $self->_targetted('command=first ', @_);
+   }
+
+   sub last {
+      my $self = shift;
+      return $self->_targetted('command=last ', @_);
+   }
+
+   sub show {
+      my $self     = shift;
+      my $slide_no = shift;
+      return $self->_targetted("command=show slide=$slide_no ", @_);
+   } ## end sub show
+
+   sub attach {
+      my $self = shift;
+      return $self->_targetted('command=attach ', @_);
+   }
+
+   sub detach {
+      my $self = shift;
+      return $self->_targetted('command=detach ', @_);
+   }
+
+   sub book {
+      my $self = shift;
+      my $code = shift;
+      return $self->send_command("command=book code=$code");
+   } ## end sub book
+
+   sub clamp {
+      return shift->send_command('command=clamp');
+   }
+
+   sub loose {
+      return shift->send_command('command=loose');
+   }
+
+   sub get_current {
+      my $self = shift;
+      my $res  = $self->send_command('command=get_current');
+      return unless defined $res;
+      my ($slide_no) = $res =~ m{(\d+) \s* \z}mxs;
+      return $slide_no;
+   } ## end sub get_current
+
+   sub get_attendees {
+      my $self = shift;
+      my $res  = $self->send_command('command=get_attendees');
+      return unless defined $res;
+      my @attendees = split /\n/, $res;
+      shift @attendees;    # status line
+
+      for my $attendee (@attendees) {
+         my %data = map { split /=/ } split /;/, $attendee;
+         $attendee = \%data;
+      } ## end for my $attendee (@att)
+
+      return @attendees if wantarray;
+      return \@attendees;
+   } ## end sub get_attendees
+
+   sub quit {
+      return shift->send_command('command=quit');
+   }
+
+   sub shut_down {
+      my $self = shift;
+      $self->release_selector();
+      $self->get_in_handle()->close() if $self->get_in_handle();
+      $self->set_in_handle(undef);
+      $self->get_out_handle()->close() if $self->get_out_handle();
+      $self->set_out_handle(undef);
+      return;
+   } ## end sub shut_down
+
+   sub is_alive {
+      my $self = shift;
+      return defined($self->get_in_handle());
+   }
+}
+
+1;    # Magic true value required at end of module
 __END__
 
 =head1 NAME
 
-WWW::Slides - serve presentations on the Web
+WWW::Slides - [Una riga di descrizione dello scopo del modulo]
 
 
 =head1 VERSION

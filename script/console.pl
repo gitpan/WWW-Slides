@@ -5,13 +5,12 @@ use Carp;
 use Pod::Usage qw( pod2usage );
 use Getopt::Long qw( :config gnu_getopt );
 use version; my $VERSION = qv('0.0.1');
+use English qw( -no_match_vars );
 use FindBin qw( $Bin );
-use IO::Socket;
-use IO::Select;
 use Term::ReadLine;
-use IO::Handle;
 
 use lib "$Bin/../lib";
+use WWW::Slides::Client::TCP;
 
 my %config = (
    backend   => "$Bin/webslides.pl",
@@ -36,14 +35,18 @@ pod2usage(-verbose => 99, -sections => 'USAGE|EXAMPLES|OPTIONS')
 pod2usage(-verbose => 2) if $config{man};
 
 # Script implementation here
-my $sock = connect_to_server();
-if (!$sock) {    # Auto-create if applicable
+my $client = eval { WWW::Slides::Client::TCP->new(
+   port => $config{cport},
+   host => $config{chost},
+) };
+if ($EVAL_ERROR) {    # Auto-create if applicable
    spawn_server()
      if $config{chost} =~ /\A(?: localhost | 127.0.0.1 )\z/mxs;
-   $sock = connect_to_server()
-     or die "could not connect to $config{chost}:$config{cport}: $!";
+   $client = WWW::Slides::Client::TCP->new(
+      port => $config{cport},
+      host => $config{chost},
+   );
 } ## end if (!$sock)
-my $sel = IO::Select->new($sock);
 
 my $term   = Term::ReadLine->new('WWW::Slides controller');
 my $prompt = 'WWW::Slides> ';
@@ -56,8 +59,8 @@ print_list();
 OUTER:
 while (defined(my $input = $term->readline($prompt))) {
    my $command = elaborate_command($input);
-   print {$OUT} send_command($command) if $command;
-   last unless $sock;
+   print {$OUT} $client->send_command($command) if $command;
+   last unless $client->is_alive();
    print_list();
 }
 
@@ -128,51 +131,18 @@ sub elaborate_command {
 
 sub print_list {
    print {$OUT} "\n";
-   my ($slide_no) = send_command('command=get_current') =~ /(\d+)\s*\z/mxs;
+   my $slide_no = $client->get_current();
    print {$OUT} "current slide: $slide_no\n";
 
-   my @att = split /\n/, send_command("command=get_attendees");
-   shift @att;
-   @attendees = ();
-   for my $attendee (@att) {
-      my %data = map { split /=/ } split /;/, $attendee;
-      push @attendees, \%data;
-
-      print {$OUT} scalar(@attendees);
+   my $count = 0;
+   for my $attendee ($client->get_attendees()) {
+      my %data = %$attendee;
+      print {$OUT} ++$count;
       print {$OUT} ": $data{id} ($data{peer_address}), ";
       print {$OUT}($data{is_attached} ? 'attached, ' : 'detached, ');
       print {$OUT} "slide $data{current_slide}\n";
    } ## end for my $attendee (@att)
 } ## end sub print_list
-
-sub send_command {
-   my ($command) = @_;
-   print {$OUT} "sending '$command'\n" if $config{debug};
-   $sock->print($command . "\n");
-
-   my $timeout  = undef;
-   my $response = '';
-   my $sel      = IO::Select->new($sock);
-   while ($sel->can_read($timeout)) {
-      $sock->sysread(my $data, 1024);
-      if (!length $data) {
-         $sock = undef;
-         last;
-      }
-      $response .= $data;
-      $timeout = 0;
-   } ## end while ($sel->can_read($timeout...
-
-   return $response;
-} ## end sub send_command
-
-sub connect_to_server {
-   return IO::Socket::INET->new(
-      Proto    => 'tcp',
-      PeerPort => $config{cport},
-      PeerAddr => $config{chost},
-   );
-} ## end sub connect_to_server
 
 __DATA__
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"

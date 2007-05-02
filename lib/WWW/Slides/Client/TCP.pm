@@ -1,29 +1,47 @@
-package WWW::Slides;
+package WWW::Slides::Client::TCP;
+{
 
-use version; our $VERSION = qv('0.0.2');
+   use version; our $VERSION = qv('0.0.1');
 
-use warnings;
-use strict;
-use Carp;
+   use warnings;
+   use strict;
+   use Carp;
+   use English qw( -no_match_vars );
 
-# Other recommended modules (uncomment to use):
-#  use IO::Prompt;
-#  use Perl6::Export;
-#  use Perl6::Slurp;
-#  use Perl6::Say;
-#  use Regexp::Autoflags;
-#  use Readonly;
+   use Object::InsideOut qw( WWW::Slides::Client::Base );
+   use IO::Socket;
 
+   # Module implementation here
+   my @port : Field # Port to connect to
+     : Std(Name => 'port') : Get(Name => 'port')
+     : Arg(Name => 'port', Mandatory => 1);
+   my @host : Field # Host to connect to
+     : Std(Name => 'host') : Get(Name => 'host')
+     : Arg(Name => 'host', Default => 'localhost');
 
-# Module implementation here
+   sub _init : PreInit {
+      my $self = shift;
+      my ($args) = @_;
 
+      my $sock = IO::Socket::INET->new(
+         PeerAddr => $args->{host},
+         PeerPort => $args->{port},
+      ) or croak "no socket for $args->{host}:$args->{port}";
+      
+      $args->{in_handle} = $sock;
+      $args->{out_handle} = $sock;
 
-1; # Magic true value required at end of module
+      return;
+   }
+
+}
+
+1;    # Magic true value required at end of module
 __END__
 
 =head1 NAME
 
-WWW::Slides - serve presentations on the Web
+WWW::Slides - [Una riga di descrizione dello scopo del modulo]
 
 
 =head1 VERSION
