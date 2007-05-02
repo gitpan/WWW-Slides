@@ -1,7 +1,7 @@
 package WWW::Slides::Controller::TCP;
 {
 
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -69,25 +69,21 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::Controller::TCP - multiple controller based on TCP
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::Controller::TCP version 0.0.3
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::Controller::TCP;
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
-  
-  
+    my $controller = WWW::Slides::Controller::TCP->new( port => 50506);
+    
+
 =head1 DESCRIPTION
 
 =for l'autore, da riempire:
@@ -141,7 +137,8 @@ This document describes WWW::Slides version 0.0.1
    devono anche includere dettagli su eventuali linguaggi di configurazione
    utilizzati.
   
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::Controller::TCP requires no configuration files or environment 
+variables.
 
 
 =head1 DEPENDENCIES

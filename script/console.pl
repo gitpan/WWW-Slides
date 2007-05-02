@@ -78,11 +78,11 @@ sub spawn_server {
    require POSIX;
 
    # Daemonise
-   chdir '/';
-   close STDOUT;
-   close STDERR;
-   close STDIN;
-   POSIX::setsid() or die "setsid: $!";
+#   chdir '/';
+#   close STDOUT;
+#   close STDERR;
+#   close STDIN;
+#   POSIX::setsid() or die "setsid: $!";
 
    # On with the (slide)show
    my $slide_show = WWW::Slides::SlideShow->new();
@@ -125,6 +125,9 @@ sub elaborate_command {
       $full .= ' ';
       @items = ();
    } ## end if ($command =~ /\A(?: $targetted )\z/mxs)
+   elsif ($command eq 'book') {
+      $full .= ' code=' . shift(@items) . ' ';
+   }
 
    return $full . " @items";
 } ## end sub elaborate_command

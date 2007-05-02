@@ -12,6 +12,7 @@ $slide_show->mock(id_first    => sub { return 0 });
 $slide_show->mock(id_last     => sub { return 5 });
 $slide_show->mock(id_next     => sub { return $_[1] + 1 });
 $slide_show->mock(id_previous => sub { return $_[1] - 1 });
+$slide_show->set_true('validate_slide_id');
 
 my $tracker;
 lives_ok {

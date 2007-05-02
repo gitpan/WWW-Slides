@@ -1,7 +1,7 @@
 package WWW::Slides::Controller::Single;
 {
 
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -244,24 +244,24 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::Controller::Single - main base class for controllers based in I/O
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::Controller::Single version 0.0.3
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::Controller::Single;
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
-  
+    # See WWW::Slides::Controller::STDIO anyway...
+    my $controller = WWW::Slides::Controller::Single->new(
+      in_handle => \*STDIN,
+      out_handle => \*STDOUT,
+    );
+
   
 =head1 DESCRIPTION
 
@@ -316,7 +316,8 @@ This document describes WWW::Slides version 0.0.1
    devono anche includere dettagli su eventuali linguaggi di configurazione
    utilizzati.
   
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::Controller::Single requires no configuration files or environment 
+variables.
 
 
 =head1 DEPENDENCIES

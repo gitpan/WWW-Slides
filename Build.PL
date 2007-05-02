@@ -19,6 +19,8 @@ my $builder = Module::Build->new(
       'IO::Socket'        => 0,
       'Object::InsideOut' => 0,
       'Socket'            => 0,
+      'Test::Exception'   => 0,
+      'Test::MockObject'  => 0,
    },
    add_to_cleanup => ['WWW-Slides-*'],
    test_files     => 't/*.t t/*/*.t',

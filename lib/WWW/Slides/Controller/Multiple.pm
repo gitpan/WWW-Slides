@@ -1,7 +1,7 @@
 package WWW::Slides::Controller::Multiple;
 {
 
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -92,31 +92,23 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::Controller::Multiple - handle multiple controllers as one
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::Controller::Multiple version 0.0.3
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::Controller::Multiple;
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
-  
   
 =head1 DESCRIPTION
 
-=for l'autore, da riempire:
-   Fornite una descrizione completa del modulo e delle sue caratteristiche.
-   Aiutatevi a strutturare il testo con le sottosezioni (=head2, =head3)
-   se necessario.
+This class is mainly intended as a base class for more specialised
+derivatives (e.g. WWW::Slides::Controller::TCP).
 
 
 =head1 INTERFACE 
@@ -164,7 +156,8 @@ This document describes WWW::Slides version 0.0.1
    devono anche includere dettagli su eventuali linguaggi di configurazione
    utilizzati.
   
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::Controller::Multiple requires no configuration files or 
+environment variables.
 
 
 =head1 DEPENDENCIES

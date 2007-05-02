@@ -1,6 +1,6 @@
 package WWW::Slides;
 
-use version; our $VERSION = qv('0.0.2');
+use version; our $VERSION = qv('0.0.3');
 
 use warnings;
 use strict;
@@ -28,7 +28,7 @@ WWW::Slides - serve presentations on the Web
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides version 0.0.3
 
 
 =head1 SYNOPSIS
@@ -48,6 +48,9 @@ This document describes WWW::Slides version 0.0.1
    Fornite una descrizione completa del modulo e delle sue caratteristiche.
    Aiutatevi a strutturare il testo con le sottosezioni (=head2, =head3)
    se necessario.
+
+This module will eventually be a facade for using the variuous modules
+available in this library. Hold on for more docs!
 
 
 =head1 INTERFACE 

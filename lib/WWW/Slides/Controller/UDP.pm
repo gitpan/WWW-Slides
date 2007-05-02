@@ -1,6 +1,6 @@
 package WWW::Slides::Controller::UDP;
 {
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -28,24 +28,20 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::Controller::UDP - simple UDP-based controller for WWW::Slides
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::Controller::UDP version 0.0.1
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::Controller::UDP;
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
-  
+    my $controller = WWW::Slides::Controller::UDP->new(port => 50506);
+
   
 =head1 DESCRIPTION
 
@@ -100,7 +96,8 @@ This document describes WWW::Slides version 0.0.1
    devono anche includere dettagli su eventuali linguaggi di configurazione
    utilizzati.
   
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::Controller::UDP requires no configuration files or environment 
+variables.
 
 
 =head1 DEPENDENCIES

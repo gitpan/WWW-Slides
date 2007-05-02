@@ -1,7 +1,7 @@
 package WWW::Slides::Client::Base;
 {
 
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -130,7 +130,6 @@ package WWW::Slides::Client::Base;
 
    sub shut_down {
       my $self = shift;
-      $self->release_selector();
       $self->get_in_handle()->close() if $self->get_in_handle();
       $self->set_in_handle(undef);
       $self->get_out_handle()->close() if $self->get_out_handle();
@@ -149,26 +148,39 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::Client::Base - base class for WWW::Slides client library
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::Client::Base version 0.0.3
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::Client::Base;
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
+    my $client = WWW::Slides::Client::Base->new(
+      in_handle => \*STDIN,
+      out_handle => \*STDOUT,
+    );
+  
+    $client->next();
+    $client->first();
+    $client->last();
+    $client->previous();
+    $client->book('code001');
+    $client->attach();
+    $client->detach('code001');
+    my @attendee_descriptions = $client->get_attendees();
+    my $current_slide = $client->get_current();
+    $client->quit();
   
   
 =head1 DESCRIPTION
+
+This module implements the client side for interactions with a
+wWW::Slides controller.
 
 =for l'autore, da riempire:
    Fornite una descrizione completa del modulo e delle sue caratteristiche.
@@ -221,7 +233,8 @@ This document describes WWW::Slides version 0.0.1
    devono anche includere dettagli su eventuali linguaggi di configurazione
    utilizzati.
   
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::Client::Base requires no configuration files or environment 
+variables.
 
 
 =head1 DEPENDENCIES

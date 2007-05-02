@@ -1,6 +1,6 @@
 package WWW::Slides::Attendee;
 {
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -81,6 +81,7 @@ package WWW::Slides::Attendee;
    
    sub send : Private {
       my $self = shift;
+      return if $self->must_check_booking();
       $self->get_handle()->print(@_);
    }
 
@@ -209,17 +210,17 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::Attendee - class to represent an Attendee in WWW::Slides
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::Attendee version 0.0.3
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::Attendee;
 
 =for l'autore, da riempire:
    Qualche breve esempio con codice che mostri l'utilizzo più comune.
@@ -230,10 +231,9 @@ This document describes WWW::Slides version 0.0.1
   
 =head1 DESCRIPTION
 
-=for l'autore, da riempire:
-   Fornite una descrizione completa del modulo e delle sue caratteristiche.
-   Aiutatevi a strutturare il testo con le sottosezioni (=head2, =head3)
-   se necessario.
+This class is used by WWW::Slides::Talk and is not generally meant for
+usage outside of it. Any change in the interface will be done without
+any notice or smooth transition system via deprecation.
 
 
 =head1 INTERFACE 
@@ -273,54 +273,21 @@ This document describes WWW::Slides version 0.0.1
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
-=for l'autore, da riempire:
-   Una spiegazione completa di qualunque sistema di configurazione
-   utilizzato dal modulo, inclusi i nomi e le posizioni dei file di
-   configurazione, il significato di ciascuna variabile di ambiente
-   utilizzata e proprietà che può essere impostata. Queste descrizioni
-   devono anche includere dettagli su eventuali linguaggi di configurazione
-   utilizzati.
-  
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::Attendee requires no configuration files or environment
+variables.
 
 
 =head1 DEPENDENCIES
 
-=for l'autore, da riempire:
-   Una lista di tutti gli altri moduli su cui si basa questo modulo,
-   incluse eventuali restrizioni sulle relative versioni, ed una
-   indicazione se il modulo in questione è parte della distribuzione
-   standard di Perl, parte della distribuzione del modulo o se
-   deve essere installato separatamente.
-
-None.
+Object::InsideOut.
 
 
 =head1 INCOMPATIBILITIES
-
-=for l'autore, da riempire:
-   Una lista di ciascun modulo che non può essere utilizzato
-   congiuntamente a questo modulo. Questa condizione può verificarsi
-   a causa di conflitti nei nomi nell'interfaccia, o per concorrenza
-   nell'utilizzo delle risorse di sistema o di programma, o ancora
-   a causa di limitazioni interne di Perl (ad esempio, molti dei
-   moduli che utilizzano filtri al codice sorgente sono mutuamente
-   incompatibili).
 
 None reported.
 
 
 =head1 BUGS AND LIMITATIONS
-
-=for l'autore, da riempire:
-   Una lista di tutti i problemi conosciuti relativi al modulo,
-   insime a qualche indicazione sul fatto che tali problemi siano
-   plausibilmente risolti in una versione successiva. Includete anche
-   una lista delle restrizioni sulle funzionalità fornite dal
-   modulo: tipi di dati che non si è in grado di gestire, problematiche
-   relative all'efficienza e le circostanze nelle quali queste possono
-   sorgere, limitazioni pratiche sugli insiemi dei dati, casi
-   particolari che non sono (ancora) gestiti, e così via.
 
 No bugs have been reported.
 

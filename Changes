@@ -3,3 +3,8 @@ Revision history for WWW-Slides
 0.0.1  Tue Apr 24 15:02:50 2007
        Initial release.
 
+0.0.3  Wed May 02 09:44:00 2007
+       Fixed missing modules in dependencies.
+       Fixed bug in client library.
+       Fixed support for booking, now working.
+       First draft of documentation for some modules

@@ -20,6 +20,8 @@ WriteMakefile(
       'IO::Socket'        => 0,
       'Object::InsideOut' => 0,
       'Socket'            => 0,
+      'Test::Exception'   => 0,
+      'Test::MockObject'  => 0,
    },
    dist  => {COMPRESS => 'gzip -9f', SUFFIX => 'gz',},
    clean => {FILES    => 'WWW-Slides-*'},

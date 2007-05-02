@@ -1,6 +1,6 @@
 package WWW::Slides::SlideTracker;
 {
-   use version; our $VERSION = qv('0.0.1');
+   use version; our $VERSION = qv('0.0.3');
 
    use warnings;
    use strict;
@@ -15,7 +15,7 @@ package WWW::Slides::SlideTracker;
      : Arg(Name => 'slide_show', Mandatory => 1);
    my @current : Field       # Main slide for talk
      : Std(Name => 'current') : Arg(Name => 'current')
-     : Get(Name => 'current') : Set(Name => 'goto');
+     : Get(Name => 'current');
    my @served_slides : Field    # Track already-sent slides
      : Std(Name => 'served_slides', Private => 1);
 
@@ -40,6 +40,14 @@ package WWW::Slides::SlideTracker;
    sub mark_current {
       my $self = shift;
       $self->get_served_slides()->{$self->current()} = 1;
+      return;
+   }
+
+   sub goto {
+      my $self = shift;
+      my ($slide_no) = @_;
+      return unless $self->slide_show()->validate_slide_id($slide_no);
+      $self->set_current($slide_no);
       return;
    }
 
@@ -93,118 +101,211 @@ __END__
 
 =head1 NAME
 
-WWW::Slides - [Una riga di descrizione dello scopo del modulo]
+WWW::Slides::SlideTracker - track transitions around a slide show.
 
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.1
+This document describes WWW::Slides::SlideTracker version 0.0.3
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+    use WWW::Slides::SlideTracker;
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
-  
+    my $tracker = WWW::Slides::SlideTracker->new(
+      slide_show => $slide_show,  # e.g. WWW::Slides::SlideShow
+      current    => 2,            # starting slide
+    );
+
+    my $current_id = $tracker->current();
+    my $current_id = $tracker->get_current(); # alias
+    $tracker->goto(3);
+
+    my $next_id = $tracker->get_next();
+    $tracker->goto_next();
+
+    my $previous_id = $tracker->get_next();
+    $tracker->goto_previous();
+
+    my $first_id = $tracker->get_next();
+    $tracker->goto_first();
+
+    my $last_id = $tracker->get_next();
+    $tracker->goto_last();
+
+    $tracker->mark_current();    # set current slide as marked
+    print 'unserved' if $tracker->current_still_unserved();
+    print 'served' if $tracker->already_served_current();
+    
   
 =head1 DESCRIPTION
 
-=for l'autore, da riempire:
-   Fornite una descrizione completa del modulo e delle sue caratteristiche.
-   Aiutatevi a strutturare il testo con le sottosezioni (=head2, =head3)
-   se necessario.
+This module is generally not meant for usage outside WWW::Slides::Talk
+or WWW::Slides::Attendee. Changes without notice are possible albeit
+not much probable.
+
+Slides can be marked for later reference. This is useful, for example,
+to track which slides have been already sent to a given Attendee, in order
+to avoid re-sending of the slide's data (which could also make a mess
+putting two divs with the same id-s).
+
+The method names are pretty self-explanatory.
 
 
 =head1 INTERFACE 
 
-=for l'autore, da riempire:
-   Scrivete una sezione separata che elenchi i componenti pubblici
-   dell'interfaccia del modulo. Questi normalmente sono formati o
-   dalle subroutine che possono essere esportate, o dai metodi che
-   possono essere chiamati su oggetti che appartengono alle classi
-   fornite da questo modulo.
-
-
-=head1 DIAGNOSTICS
-
-=for l'autore, da riempire:
-   Elencate qualunque singolo errore o messaggio di avvertimento che
-   il modulo può generare, anche quelli che non "accadranno mai".
-   Includete anche una spiegazione completa di ciascuno di questi
-   problemi, una o più possibili cause e qualunque rimedio
-   suggerito.
-
+There are four main groups of methods:
 
 =over
 
-=item C<< Error message here, perhaps with %s placeholders >>
+=item
 
-[Descrizione di un errore]
+constructor;
 
-=item C<< Another error message here >>
+=item
 
-[Descrizione di un errore]
+slide marking management;
 
-[E così via...]
+=item
+
+slide transition peeking;
+
+=item
+
+slide transition actuation.
 
 =back
 
 
-=head1 CONFIGURATION AND ENVIRONMENT
+=head2 Constructor
 
-=for l'autore, da riempire:
-   Una spiegazione completa di qualunque sistema di configurazione
-   utilizzato dal modulo, inclusi i nomi e le posizioni dei file di
-   configurazione, il significato di ciascuna variabile di ambiente
-   utilizzata e proprietà che può essere impostata. Queste descrizioni
-   devono anche includere dettagli su eventuali linguaggi di configurazione
-   utilizzati.
+The constructor method is named C<new> and accepts the following arguments:
+
+=over
+
+=item B<slide_show> (mandatory)
+
+any WWW::Slides::SlideShow interface compliant object.
+
+=item B<current> (optional)
+
+the slide where the tracker should be set first. Defaults to the slide
+id given back as B<id_first()> from the C<slide_show> object described
+above.
+
+=back
+
+
+=head2 Slide Marking Management
+
+This group can handle a mark for each slide, setting the mark and retrieving
+the mark status. Note that at the moment there is no way to un-mark a slide.
+
+There are three methods in this area:
+
+=over
+
+=item B<mark_current()>
+
+Set a mark on the current slide.
+
+=item B<already_served_current()>
+
+True if there is a mark on the current slide, false otherwise.
+
+=item B<current_still_unserved()>
+
+True if the current slide has no mark, false otherwise. This is the
+exact negation of C<already_served_current()>, just syntactic sugar.
+
+=back
+
+
+=head2 Slide Transition Peeking
+
+These methods allow to I<peek> which slide would be set after a given
+transition. These are also the functions internally used by the
+L<Slide Transition Actuation> functions decribed in the next paragraph.
+
+There are five methods in this area:
+
+=over
+
+=item B<current()> or B<get_current()>
+
+=item B<get_first()>
+
+=item B<get_last()>
+
+=item B<get_previous()>
+
+=item B<get_next()>
+
+=back
+
+Names are sufficiently self-explanatory. Note that I<previous> and I<next> 
+are intended with respect to the current slide.
+
+
+=head2 Slide Transition Actuation
+
+These methods allow the tracker to make a transition to a given slide.
+Note that a transition does B<NOT> mean that the slide will be marked,
+you have to call the marking methods explicitly.
+
+These are the methods in this area:
+
+=over
+
+=item B<goto($slide_no)>
+
+Goto the given C<$slide_no>. Consistency check will be on for this method
+(as opposed to C<set_current()>, see below), for this reason this is
+the suggested method to use.
+
+=item B<set_current($slide_no)>
+
+Goto the given C<$slide_no>. No consistency check will be done for this.
+Use C<goto()>, it's more robust.
+
+=item B<goto_first()>
+
+=item B<goto_last()>
+
+=item B<goto_previous()>
+
+=item B<goto_next()>
+
+=back
+
+Names are sufficiently self-explanatory. Note that I<previous> and I<next> 
+are intended with respect to the current slide.
+
+
+
+=head1 DIAGNOSTICS
+
+Shouldn't balk at you.
+
+
+=head1 CONFIGURATION AND ENVIRONMENT
   
-WWW::Slides requires no configuration files or environment variables.
+WWW::Slides::SlideTracker requires no configuration files or environment 
+variables.
 
 
 =head1 DEPENDENCIES
 
-=for l'autore, da riempire:
-   Una lista di tutti gli altri moduli su cui si basa questo modulo,
-   incluse eventuali restrizioni sulle relative versioni, ed una
-   indicazione se il modulo in questione è parte della distribuzione
-   standard di Perl, parte della distribuzione del modulo o se
-   deve essere installato separatamente.
-
-None.
+Object::InsideOut.
 
 
 =head1 INCOMPATIBILITIES
-
-=for l'autore, da riempire:
-   Una lista di ciascun modulo che non può essere utilizzato
-   congiuntamente a questo modulo. Questa condizione può verificarsi
-   a causa di conflitti nei nomi nell'interfaccia, o per concorrenza
-   nell'utilizzo delle risorse di sistema o di programma, o ancora
-   a causa di limitazioni interne di Perl (ad esempio, molti dei
-   moduli che utilizzano filtri al codice sorgente sono mutuamente
-   incompatibili).
 
 None reported.
 
 
 =head1 BUGS AND LIMITATIONS
-
-=for l'autore, da riempire:
-   Una lista di tutti i problemi conosciuti relativi al modulo,
-   insime a qualche indicazione sul fatto che tali problemi siano
-   plausibilmente risolti in una versione successiva. Includete anche
-   una lista delle restrizioni sulle funzionalità fornite dal
-   modulo: tipi di dati che non si è in grado di gestire, problematiche
-   relative all'efficienza e le circostanze nelle quali queste possono
-   sorgere, limitazioni pratiche sugli insiemi dei dati, casi
-   particolari che non sono (ancora) gestiti, e così via.
 
 No bugs have been reported.
 
