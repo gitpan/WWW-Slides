@@ -1,0 +1,70 @@
+WWW-Slides version 0.0.1
+
+WWW::Slides is (well, will be) a system for serving presentation on the
+web, with one (or more) "speakers" controlling what's seen by a
+"vast" audience of attendees. It relies on HTTP streaming and CSS
+in order to send different slides and force browsers to show the
+correct one.
+
+The distribution is an ongoing project, but you can already have a working
+example by using the "console.pl" script inside the "scripts" directory.
+It has full documentation so you should be able to start seeing something
+interesting now. To use the script, you don't have to actually install
+the module, but you must install the dependencies, of course (see below).
+
+Documentation for the modules will come, together with a complete test
+suite (the current one is sort of complete for the modules that are
+addressed, anyway).
+
+
+INSTALLATION
+
+To install this module, run the following commands:
+
+    perl Makefile.PL
+    make
+    make test
+    make install
+
+
+Alternatively, to install with Module::Build, you can use the following commands:
+
+    perl Build.PL
+    ./Build
+    ./Build test
+    ./Build install
+
+
+
+DEPENDENCIES
+
+Quite a few. Core:
+
+* strict
+* warnings
+* Carp
+* English
+* Socket
+* IO::Socket
+* IO::Select
+* IO::Handle
+
+
+Will-be-core:
+
+* version
+
+Non-core:
+
+* Object::InsideOut
+* Term::ReadLine (if you want to use the basic console)
+* HTTP::Response (LWP)
+* Digest::MD5
+
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2007, Flavio Poletti
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
