@@ -4,16 +4,16 @@ use warnings;
 use Carp;
 use Pod::Usage qw( pod2usage );
 use Getopt::Long qw( :config gnu_getopt );
-use version; my $VERSION = qv('0.0.1');
+use version; my $VERSION = qv('0.0.4');
 use English qw( -no_match_vars );
-use FindBin qw( $Bin );
 use Term::ReadLine;
 
-use lib "$Bin/../lib";
+use lib qw( ../lib );
+use WWW::Slides qw( spawn_server );
 use WWW::Slides::Client::TCP;
 
+
 my %config = (
-   backend   => "$Bin/webslides.pl",
    hport     => 50505,
    cport     => 50506,
    chost     => 'localhost',
@@ -35,13 +35,31 @@ pod2usage(-verbose => 99, -sections => 'USAGE|EXAMPLES|OPTIONS')
 pod2usage(-verbose => 2) if $config{man};
 
 # Script implementation here
+my $spawned;
 my $client = eval { WWW::Slides::Client::TCP->new(
    port => $config{cport},
    host => $config{chost},
 ) };
 if ($EVAL_ERROR) {    # Auto-create if applicable
-   spawn_server()
-     if $config{chost} =~ /\A(?: localhost | 127.0.0.1 )\z/mxs;
+   if ($config{chost} =~/\A(?: localhost | 127.0.0.1 )\z/mxs) {
+      my $slides = $config{sfile};
+      $slides = \@ARGV if @ARGV;
+      if (! defined $slides) {
+         my $data = '';
+         while (<DATA>) {
+            last if /\A __END__ \s*\z/msx;
+            $data .= $_;
+         }
+         $slides = \$data;
+      }
+      $spawned = spawn_server({
+         slides => $slides,
+         controller_port => $config{cport},
+         http_port       => $config{hport},
+         debug           => $config{debug},
+         must_book       => $config{must_book},
+      }) or die $!;
+   }
    $client = WWW::Slides::Client::TCP->new(
       port => $config{cport},
       host => $config{chost},
@@ -57,50 +75,24 @@ my $OUT = $term->OUT() || \*STDOUT;
 my @attendees; # Global variable to handle attendees by num. id
 print_list();
 OUTER:
+my $last = '';
+my $requested_exit = 1;
 while (defined(my $input = $term->readline($prompt))) {
+   last if $input =~ /\A\s* bye \s*\z/mxs;
+   $input = $last if $input =~ /\A\s*\z/;
+   $last = $input;
    my $command = elaborate_command($input);
    print {$OUT} $client->send_command($command) if $command;
+   $requested_exit = 0;
    last unless $client->is_alive();
+   $requested_exit = 1;
    print_list();
 }
 
-print "talk server exited\n";
-
-sub spawn_server {
-   my $pid = fork();
-   die "could not fork(): $!" unless defined $pid;
-   sleep(1) && return if $pid;    # father
-
-   require WWW::Slides::SlideShow;
-   require WWW::Slides::Talk;
-   require WWW::Slides::Controller::STDIO;
-   require WWW::Slides::Controller::TCP;
-   require POSIX;
-
-   # Daemonise
-#   chdir '/';
-#   close STDOUT;
-#   close STDERR;
-#   close STDIN;
-#   POSIX::setsid() or die "setsid: $!";
-
-   # On with the (slide)show
-   my $slide_show = WWW::Slides::SlideShow->new();
-   $slide_show->read($config{sfile} || \*DATA);
-
-   my $controller =
-     WWW::Slides::Controller::TCP->new(port => $config{cport});
-
-   my $talk = WWW::Slides::Talk->new(
-      controller => $controller,
-      port       => $config{hport},
-      slide_show => $slide_show,
-      must_book  => $config{must_book},
-   );
-   $talk->run();
-
-   exit 0;
-} ## end sub spawn_server
+if ($spawned && ! $requested_exit) {
+   my $child = wait();
+   print "child $child exited with status $?\n";
+}
 
 sub elaborate_command {
    my ($input) = @_;
@@ -146,6 +138,7 @@ sub print_list {
       print {$OUT} "slide $data{current_slide}\n";
    } ## end for my $attendee (@att)
 } ## end sub print_list
+
 
 __DATA__
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
@@ -197,8 +190,8 @@ two pages.
 
    </body>
 </html>
-__END__
 
+__END__
 =head1 NAME
 
 console.pl - demo script for WWW::Slides
@@ -228,7 +221,7 @@ See version at beginning of script, variable $VERSION, or call
    # Ditto, but values on command line (these are equal to defaults)
    shell$ console.pl -P 50506 -H localhost -p 50505
 
-   # Force booking of clients (might be not enabled yet)
+   # Force booking of clients
    shell$ console.pl -b
 
    # Use custom slides instead of demo ones
@@ -350,8 +343,6 @@ You can force the clients to give you a booking code when they enter, by
 specifing the <--must-book|-b> option:
 
    shell$ console.pl --http-port 8080 --must-book
-
-NOTE: THIS OPTION COULD BE NOT IMPLEMENTED AT THE MOMENT
 
 If this is the case, you can book clients from the console itself (see
 following paragraph), and then clients must put the booking code as the
@@ -614,8 +605,6 @@ These two commands work on a higher - i.e. talk - level and are not
 specific per attendee.
 
 =head2 Booking
-
-NOTE: this booking infrastructure could be not implemented yet
 
 You can book an attendee with the C<book> command, like this:
 

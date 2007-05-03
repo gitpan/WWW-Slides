@@ -3,14 +3,10 @@ use strict;
 use warnings;
 use CGI qw( :standard );
 use English qw( -no_match_vars );
-use version; my $VERSION = qv('0.0.1');
-use FindBin qw( $Bin );
-use lib "$Bin/../lib";
-use lib '/home/poletti/sviluppo/perl/WWW-Slides/lib';
+use version; my $VERSION = qv('0.0.4');
 use WWW::Slides::Client::TCP;
 
 my %config = (
-   backend => "$Bin/webslides.pl",
    hport   => 50505,
    cport   => 50506,
    chost   => 'localhost',
@@ -127,6 +123,7 @@ sub spawn_server {
    close STDERR;
    close STDIN;
    POSIX::setsid() or die "setsid: $!";
+   $SIG{PIPE} = 'IGNORE'; # Dunno why, but...
 
    # On with the (slide)show
    my $slide_show = WWW::Slides::SlideShow->new();

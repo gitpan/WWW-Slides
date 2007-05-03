@@ -1,97 +1,83 @@
-package WWW::Slides::Controller::TCP;
+package WWW::Slides::BasicLogger;
 {
-
    use version; our $VERSION = qv('0.0.4');
 
    use warnings;
    use strict;
    use Carp;
+   use IO::Handle;
 
-   use Object::InsideOut qw( WWW::Slides::Controller::Multiple );
-   use WWW::Slides::Controller::Single;
-   use IO::Socket;
+   use Object::InsideOut;
+
+   # Other recommended modules (uncomment to use):
+   #  use IO::Prompt;
+   #  use Perl6::Export;
+   #  use Perl6::Slurp;
+   #  use Perl6::Say;
+   #  use Regexp::Autoflags;
+   #  use Readonly;
 
    # Module implementation here
-   my @port : Field   # Port to listen to
-     : Std(Name => 'port', Private => 1) : Get(Name => 'port')
-     : Arg(Name => 'port', Mandatory => 1);
-   my @door : Field   # to accept connections
-     : Std(Name => 'door', Private => 1);
+   my @channel : Field    # Where the logging will be sent
+     : Std(Name => 'channel', Private => 1) : Get(Name => 'channel')
+     : Arg(Name => 'channel', Default => \*STDERR);
+
+   my %init_args : InitArgs = ('fake' => '',);
 
    sub _init : Init {
       my $self = shift;
-      $self->set_door(IO::Socket::INET->new(
-         Proto => 'tcp',
-         LocalPort => $self->port(),
-         Listen => 3,
-         ReuseAddr => 1,
-      ));
-      return;
+      my ($args) = @_;
+      $self->set_channel(undef) if $args->{fake};
    }
-
-   sub set_selector {
+   sub print : Private {
       my $self = shift;
-      my ($selector) = @_;
-      $selector->add($self->get_door());
-      $self->SUPER::set_selector($selector);
-      return;
-   }
-
-   sub release_selector {
-      my $self = shift;
-      $self->SUPER::release_selector();
-      $self->selector()->remove($self->get_door());
-      return;
-   }
-
-   sub owns {
-      my $self = shift;
-      my ($fh) = @_;
-      return ($fh == $self->get_door()) || $self->SUPER::owns($fh);
-   }
-
-   sub execute_commands { # Manage command-oriented buffering
-      my $self = shift;
-      my ($fh, $talk) = @_;
-      if ($fh == $self->get_door()) {
-         my $newcomer = $fh->accept();
-         $self->add(WWW::Slides::Controller::Single->new(
-            in_handle => $newcomer,
-            out_handle => $newcomer,
-         ));
-         return;
+      if (my $channel = $self->channel()) {
+         $channel->print(@_, "\n");
       }
-      return $self->SUPER::execute_commands($fh, $talk);
-   } ## end sub get_commands
-
+      return;
+   }
+   sub debug { shift->print(@_); }
+   sub info  { shift->print(@_); }
+   sub warn  { shift->print(@_); }
+   sub error { shift->print(@_); }
+   sub fatal { shift->print(@_); }
 }
+
 1;    # Magic true value required at end of module
 __END__
 
 =head1 NAME
 
-WWW::Slides::Controller::TCP - multiple controller based on TCP
+WWW::Slides::BasicLogger - serve presentations on the Web
 
 
 =head1 VERSION
 
-This document describes WWW::Slides::Controller::TCP version 0.0.3
+This document describes WWW::Slides::BasicLogger version 0.0.4
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides::Controller::TCP;
-
-    my $controller = WWW::Slides::Controller::TCP->new( port => 50506);
+    use WWW::Slides::BasicLogger;
     
+    my $logger = WWW::Slides::BasicLogger->new();
+    my $logger_stdout = WWW::Slides::BasicLogger->new(channel => \*STDOUT);
 
+    $logger->debug('...');
+    $logger->info('...');
+    $logger->warn('...');
+    $logger->error('...');
+    $logger->fatal('...');
+  
+  
 =head1 DESCRIPTION
 
-=for l'autore, da riempire:
-   Fornite una descrizione completa del modulo e delle sue caratteristiche.
-   Aiutatevi a strutturare il testo con le sottosezioni (=head2, =head3)
-   se necessario.
+This module mimics basic Log::Log4perl logging if you don't want to install
+Log::Log4perl but need to have some basic logging of what's happening
+inside WWW::Slides. Just pass the logger parameter when you instantiate
+an object.
 
+Note: logging support may not be enabled on all classes.
 
 =head1 INTERFACE 
 
@@ -138,8 +124,7 @@ This document describes WWW::Slides::Controller::TCP version 0.0.3
    devono anche includere dettagli su eventuali linguaggi di configurazione
    utilizzati.
   
-WWW::Slides::Controller::TCP requires no configuration files or environment 
-variables.
+WWW::Slides requires no configuration files or environment variables.
 
 
 =head1 DEPENDENCIES

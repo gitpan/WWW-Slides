@@ -1,6 +1,6 @@
 package WWW::Slides::Attendee;
 {
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.4');
 
    use warnings;
    use strict;
@@ -93,6 +93,11 @@ package WWW::Slides::Attendee;
       return;
    } ## end sub send_start :
 
+   sub send_stop : Private {
+      my $self = shift;
+      return $self->send($self->slide_show()->get_postamble());
+   }
+
    sub send_HTTP_headers : Private {    # Get from slide_show?
       my $self = shift;
 
@@ -171,7 +176,8 @@ package WWW::Slides::Attendee;
    sub handle_input {
       my $self = shift;
       my ($give_data) = @_;
-      $self->get_handle()->sysread(my $buffer, 1024);
+      my $handle = $self->get_handle() or return;
+      $handle->sysread(my $buffer, 1024);
       return $buffer if $give_data;
       return defined $buffer && length $buffer;
    } ## end sub handle_input
@@ -193,6 +199,13 @@ package WWW::Slides::Attendee;
       my $self = shift;
       $self->set_check_booking(0);
       $self->send_start();
+      return;
+   }
+
+   sub shut_down {
+      my $self = shift;
+      $self->send_stop();
+      $self->get_handle()->close();
       return;
    }
 

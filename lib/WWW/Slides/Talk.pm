@@ -5,7 +5,7 @@ package WWW::Slides::Talk;
    #   use diagnostics;
    use strict;
    use Carp;
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.4');
    use Object::InsideOut;
    use IO::Socket;
    use IO::Select;
@@ -43,31 +43,41 @@ package WWW::Slides::Talk;
    my @booked : Field        # Track expected attendees
      : Std(Name => 'booked', Private => 1)
      : Get(Name => 'booked', Private => 1);
-   my @accepts_detaches : Field  # Attendees can detach
+   my @accepts_detaches : Field    # Attendees can detach
      : Std(Name => 'accepts_detaches', Private => 1)
      : Get(Name => 'accepts_detaches')
      : Arg(Name => 'accepts_detaches', Default => 1);
 
-   my @slide_show : Field    # Where we're getting the slides from
+   my @slide_show : Field          # Where we're getting the slides from
      : Std(Name => 'slide_show', Private => 1)
      : Get(Name => 'slide_show', Private => 1)
      : Arg(Name => 'slide_show', Mandatory => 1);
-   my @tracker : Field       # Track current slide
+   my @tracker : Field             # Track current slide
      : Std(Name => 'tracker', Private => 1)
      : Get(Name => 'tracker', Private => 1);
 
-   my @ping_interval : Field    # Anti-timeout
+   my @ping_interval : Field       # Anti-timeout
      : Std(Name => 'ping_interval')
      : Arg(Name => 'ping_interval', Default => 60);
-   my @alive : Field            # Is this talk still alive?
+   my @alive : Field               # Is this talk still alive?
      : Std(Name => 'alive', Private => 1)
      : Get(Name => 'is_alive', Private => 1);
-   my @selector : Field         # For select() operations
+   my @selector : Field            # For select() operations
      : Std(Name => 'selector', Private => 1);
+
+   my @logger : Field              # Where to send any log message
+     : Std(Name => 'logger', Private => 1) : Get(Name => 'logger')
+     : Arg(Name => 'logger');
 
    sub _init : Init {
       my $self = shift;
       my ($args) = @_;
+
+      # Ensure there's a logger, even a fake one
+      if (! $self->logger()) {
+         require WWW::Slides::BasicLogger;
+         $self->set_logger(WWW::Slides::BasicLogger->new(fake => 1));
+      }
 
       my $door = IO::Socket::INET->new(
          Proto     => 'tcp',
@@ -75,7 +85,8 @@ package WWW::Slides::Talk;
          ReuseAddr => 1,
          Listen    => 3,
         )
-        or croak "could not create door socket on port ", $self->get_port();
+        or croak "could not create door socket on port ",
+        $self->get_port();
       $self->set_door($door);
 
       my $selector = IO::Select->new($door);
@@ -95,6 +106,7 @@ package WWW::Slides::Talk;
 
       $self->set_alive(1);
 
+
       return;
    } ## end sub _init :
      #---------------------------------------------------------------------
@@ -105,6 +117,7 @@ package WWW::Slides::Talk;
       my $selector   = $self->get_selector();
       my $controller = $self->get_controller();
 
+      $self->logger()->info('run(): entering main loop');
       while ($self->is_alive() && $controller->is_alive()) {
          my @ready = $selector->can_read($self->get_ping_interval());
          $self->ping();
@@ -122,6 +135,11 @@ package WWW::Slides::Talk;
          } ## end for my $fh (@ready)
       } ## end while ($self->is_alive() ...
 
+      $self->logger()->info('run() exited from loop, talk ',
+         ($self->is_alive() ? 'alive' : 'dead'),
+         ', controller ',
+         ($controller->is_alive() ? 'alive' : 'dead')
+      );
       $self->cleanup();
 
       return;
@@ -129,7 +147,8 @@ package WWW::Slides::Talk;
 
    sub cleanup : Private {
       my $self = shift;
-      $self->set_attendees(undef);
+      $self->logger()->debug('cleanup()');
+      $self->remove_attendee($_) for $self->get_all_attendees();
       return;
    }
 
@@ -198,46 +217,73 @@ package WWW::Slides::Talk;
       return @_ if @_;
       return $self->get_attached_attendees();
    }
-   
+
    # Transition commands, default to attached attendees
    sub show {    # Set specific slide
       my $self     = shift;
       my $slide_no = shift;
-      return unless $self->slide_show()->validate_slide_id($slide_no);
 
-      $self->tracker()->goto($slide_no) unless @_;
-      my @attendees = $self->get_show_attendees(@_) or return;
-      return $self->broadcast(['show', $slide_no], @attendees);
+      if (! $self->slide_show()->validate_slide_id($slide_no)) {
+         $self->logger()->error("show(): invalid slide $slide_no");
+         return;
+      }
+      
+      if (@_) {
+         $self->logger()->debug("show(): going to slide $slide_no "
+            . 'for some attendees only');
+      }
+      else {
+         $self->logger()->debug("show(): going to slide $slide_no");
+         $self->tracker()->goto($slide_no);
+      }
+      
+      if (my @attendees = $self->get_show_attendees(@_)) {
+         return $self->broadcast(['show', $slide_no], @attendees);
+      }
+      $self->logger()->debug('show(): no attendee found');
+      return;
+   } ## end sub show
+
+   sub constrained_show : Private { # Factorised transition
+      my $self = shift;
+      my $bare = shift;
+      my $method = 'show_' . $bare;
+
+      if (@_) {
+         $self->logger()->debug($method . '() for some attendees');
+      }
+      else {
+         my $tracker = $self->tracker();
+         $tracker->can('goto_' . $bare)->($tracker); # Call method OO-style
+         $self->logger()->debug($method . '()');
+      }
+      
+      if (my @attendees = $self->get_show_attendees(@_)) {
+         return $self->broadcast($method, @attendees);
+      }
+      $self->logger()->debug($method . '(): no attendee found');
+      return;
    }
 
    sub show_first {
       my $self = shift;
-      $self->tracker()->goto_first() unless @_;
-      my @attendees = $self->get_show_attendees(@_) or return;
-      return $self->broadcast('show_first', @attendees);
-   }
+      return $self->constrained_show('first', @_);
+   } ## end sub show_first
 
    sub show_last {
       my $self = shift;
-      $self->tracker()->goto_last() unless @_;
-      my @attendees = $self->get_show_attendees(@_) or return;
-      return $self->broadcast('show_last', @attendees);
-   }
+      return $self->constrained_show('last', @_);
+   } ## end sub show_last
 
    sub show_next {
       my $self = shift;
-      $self->tracker()->goto_next() unless @_;
-      my @attendees = $self->get_show_attendees(@_) or return;
-      return $self->broadcast('show_next', @attendees);
-   }
+      return $self->constrained_show('next', @_);
+   } ## end sub show_next
 
    sub show_previous {
       my $self = shift;
-      $self->tracker()->goto_previous() unless @_;
-      my @attendees = $self->get_show_attendees(@_) or return;
-      return $self->broadcast('show_previous', @attendees);
-   }
-
+      return $self->constrained_show('previous', @_);
+   } ## end sub show_previous
 
    # Command execution
    sub execute_commands : Private {
@@ -248,11 +294,15 @@ package WWW::Slides::Talk;
 
    sub welcome_attendee : Private {
       my $self = shift;
+      my $logger = $self->logger();
 
+      $logger->debug('welcome_attendee(): accept()-ing new attendee');
       my $handle = $self->get_door()->accept()
         or croak("accept(): $OS_ERROR");
+      $logger->debug("welcome_attendee(): $handle");
 
       # This also serves the first slide to the connected user
+      $logger->debug('welcome_attendee(): creating object for new attendee');
       my $attendee = WWW::Slides::Attendee->new(
          handle        => $handle,
          slide_show    => scalar $self->get_slide_show(),
@@ -272,9 +322,11 @@ package WWW::Slides::Talk;
       my ($attendee) = @_;
       my $handle     = $attendee->get_handle();
 
+      $self->logger()->debug('removing attendee');
       $self->get_selector()->remove($handle);
       delete $self->get_attendees()->{$handle};
 
+      $attendee->shut_down();
       return;
    } ## end sub remove_attendee :
 
@@ -299,12 +351,14 @@ package WWW::Slides::Talk;
    sub book {
       my $self = shift;
       my ($code) = @_;
+      $self->logger()->debug("book(): booking with code $code");
       $self->booked()->{$code} = 1;
       return;
    } ## end sub book
 
    sub quit {
       my $self = shift;
+      $self->logger()->debug("quit() requested");
       $self->set_alive(0);
       return;
    }
@@ -312,6 +366,7 @@ package WWW::Slides::Talk;
    sub attach {
       my $self    = shift;
       my $current = $self->tracker()->current();
+      $self->logger()->debug("attach()");
       return $self->broadcast(
          sub {
             my $attendee = shift;
@@ -328,6 +383,7 @@ package WWW::Slides::Talk;
    sub detach {
       my $self = shift;
       return unless $self->accepts_detaches();
+      $self->logger()->debug("detach()");
       return $self->broadcast(
          sub {
             shift->detach();
@@ -335,17 +391,19 @@ package WWW::Slides::Talk;
          },
          @_
       );
-   }
+   } ## end sub detach
 
    sub clamp {
-      my $self    = shift;
+      my $self = shift;
+      $self->logger()->debug("clamp()");
       $self->set_accepts_detaches(0);
       $self->attach();
       return;
-   }
+   } ## end sub clamp
 
    sub loose {
       my $self = shift;
+      $self->logger()->debug("loose()");
       $self->set_accepts_detaches(1);
       return;
    }
@@ -358,15 +416,15 @@ package WWW::Slides::Talk;
          sub {
             my $attendee = shift;
             return {
-               is_attached => $attendee->is_attached(),
-               id => $attendee->id(),
+               is_attached   => $attendee->is_attached(),
+               id            => $attendee->id(),
                current_slide => $attendee->tracker()->current(),
-               peer_address => $attendee->peer_address(),
+               peer_address  => $attendee->peer_address(),
             };
          },
          @_
       );
-   }
+   } ## end sub get_attendees_details
 }
 
 1;    # Magic true value required at end of module

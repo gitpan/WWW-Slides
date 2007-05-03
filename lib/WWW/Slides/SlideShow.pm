@@ -1,7 +1,7 @@
 package WWW::Slides::SlideShow;
 {
 
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.4');
 
    use warnings;
    use strict;
@@ -27,7 +27,8 @@ package WWW::Slides::SlideShow;
      : Std(Name => 'preamble');
    my @slides : Field             # slide repository
      : Std(Name => 'slides', Private => 1);
-
+   my @postamble : Field          # HTML/whatever postamble
+     : Std(Name => 'postamble');
 
    sub read_fh : Private {
       my $self = shift;
@@ -57,7 +58,7 @@ package WWW::Slides::SlideShow;
       $self->set_slides(\@slides);
 
       return;
-   }
+   } ## end sub read_fh :
 
    sub read {
       my $self = shift;
@@ -66,28 +67,92 @@ package WWW::Slides::SlideShow;
       croak "undefined file to read slide show" unless defined $what;
 
       my ($fh, $was_mine);
-      if (ref $what eq 'SCALAR') { # Straight string
+      if (ref $what eq 'SCALAR') {    # Straight string
          open $fh, '<', $what
-            or croak "can't open in-memory filehandle: $OS_ERROR";
+           or croak "can't open in-memory filehandle: $OS_ERROR";
          $self->set_filename('<string>');
          $was_mine = 1;
-      }
+      } ## end if (ref $what eq 'SCALAR')
       elsif (ref $what eq 'GLOB') {
          $fh = $what;
          $self->set_filename('<filehandle>');
       }
+      elsif (ref $what eq 'ARRAY') {    # One file per slide
+         return $self->read_slides(@$what);
+      }
       else {
          open $fh, '<', $what
-            or croak "can't open('$what'): $OS_ERROR";
+           or croak "can't open('$what'): $OS_ERROR";
          $self->set_filename($what);
          $was_mine = 1;
-      }
+      } ## end else [ if (ref $what eq 'SCALAR')
 
       my $retval = $self->read_fh($fh);
       close $fh if $was_mine;
 
       return $retval;
    } ## end sub read
+
+   sub read_slides {
+      my $self = shift;
+
+      $self->set_preamble('
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                      "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+   <head>
+      <title>WWW::Slides presentation</title>
+   </head>
+   <body>
+      ');
+
+      $self->set_postamble("\n</body></html>\n");
+      
+      my @slides;
+      for my $filename (@_) {
+         my $text   = $self->read_slide($filename);
+         my $div_id = 'slide' . scalar @slides;
+         push @slides,
+           {
+            div_id => $div_id,
+            slide  => qq{\n<div id="$div_id"} . $text . "\n</div>\n"
+           };
+      } ## end for my $filename (@_)
+      $self->set_slides(\@slides);
+      return 1;
+   } ## end sub read_slides
+
+   sub read_slide {    # append a slide
+      my $self = shift;
+      my ($filename) = @_;
+      require HTML::Parser;
+      my $parser = HTML::Parser->new(api_version => 3) or die $!;
+
+      my $text = '';
+      my $start_handler = sub {
+         my ($tag, $self) = @_;
+         return unless lc($tag) eq 'body';
+         $self->handler(default => sub { $text .= shift }, 'text');
+         $self->handler(start   => sub { $text .= shift }, 'text');
+         $self->handler(
+            end => sub {
+               my ($tagname, $self, $newtext) = @_;
+               if (lc($tagname) eq 'body') {
+                  $self->eof();
+               }
+               else {
+                  $text .= $newtext if defined $newtext;
+               }
+            },
+            'tagname,self,text'
+         );
+      };
+      $parser->handler(start => $start_handler, 'tagname,self');
+
+      $parser->parse_file($filename) 
+         or die "could not parse '$filename': $OS_ERROR";
+      return $text;
+   } ## end sub read_slide
 
    sub add_headers {    # Headers are ok for the moment
       my $self = shift;

@@ -4,9 +4,9 @@ use Test::More 'no_plan';
 
 BEGIN {
    diag('Testing inclusions');
-   for my $module (
+   for my $module ( 'WWW::Slides',
       map { "WWW::Slides::$_" }
-      qw( Talk Attendee SlideShow SlideTracker
+      qw( Talk Attendee SlideShow SlideTracker BasicLogger
       Controller::UDP Controller::TCP Controller::STDIO
       Controller::Multiple Controller::Single
       Client::TCP Client::Base

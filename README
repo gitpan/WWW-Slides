@@ -16,6 +16,14 @@ Documentation for the modules will come, together with a complete test
 suite (the current one is sort of complete for the modules that are
 addressed, anyway).
 
+You can already see it all in action using the stuff in the script
+directory. The console.pl script is by far the most complete (with
+documentation, too); if you want to try the webslides-cgi.pl script
+(as a CGI, of course) please remember to change the shebang line
+at the very beginning with the place where your perl resides
+(in most cases, call 'which perl' from the shell and see what the
+result is). I'll try to figure out how to fix this in the future.
+
 
 INSTALLATION
 

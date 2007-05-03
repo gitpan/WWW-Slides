@@ -7,4 +7,11 @@ Revision history for WWW-Slides
        Fixed missing modules in dependencies.
        Fixed bug in client library.
        Fixed support for booking, now working.
-       First draft of documentation for some modules
+       First draft of documentation for some modules.
+
+0.0.4  Wed May 02 13:04:00 2007
+       Updated docs in scripts.
+       Enabled booking (actually already done in 0.0.3).
+       Implemented spawn_server in WWW::Slides, made console.pl use it.
+       Fixed minor bugs on the way.
+       Other stuff I really don't remember.

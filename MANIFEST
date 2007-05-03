@@ -5,6 +5,7 @@ Makefile.PL
 README
 lib/WWW/Slides.pm
 lib/WWW/Slides/Attendee.pm
+lib/WWW/Slides/BasicLogger.pm
 lib/WWW/Slides/Client/Base.pm
 lib/WWW/Slides/Client/TCP.pm
 lib/WWW/Slides/Controller/Multiple.pm

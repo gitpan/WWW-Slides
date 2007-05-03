@@ -1,24 +1,98 @@
 package WWW::Slides;
 
-use version; our $VERSION = qv('0.0.3');
+use version; our $VERSION = qv('0.0.4');
 
 use warnings;
 use strict;
 use Carp;
+use base 'Exporter';
+use Scalar::Util qw( blessed );
 
-# Other recommended modules (uncomment to use):
-#  use IO::Prompt;
-#  use Perl6::Export;
-#  use Perl6::Slurp;
-#  use Perl6::Say;
-#  use Regexp::Autoflags;
-#  use Readonly;
-
+our @EXPORT    = qw();
+our @EXPORT_OK = qw( spawn_server );
 
 # Module implementation here
 
+sub _launch_server {
+   my %config = %{$_[0]};
 
-1; # Magic true value required at end of module
+   # Prepare and run
+   if (!exists $config{talk}) {
+      if (blessed $config{slides}) {
+         $config{slide_show} = $config{slides};
+      }
+      else {
+         require WWW::Slides::SlideShow;
+         $config{slide_show} = WWW::Slides::SlideShow->new();
+         $config{slide_show}->read($config{slides});
+      }
+
+      if (!exists $config{controller}) {
+         require WWW::Slides::Controller::TCP;
+         $config{controller} =
+           WWW::Slides::Controller::TCP->new(
+            port => $config{'controller_port'},);
+      } ## end if (!exists $config{controller...
+
+      if ($config{debug} && !exists $config{logger}) {
+         require WWW::Slides::BasicLogger;
+         $config{logger} =
+           WWW::Slides::BasicLogger->new(channel => \*STDERR);
+      }
+
+      # Ensure a couple of defaults
+      $config{accepts_detaches} = 1
+        unless exists $config{accepts_detaches};
+      $config{ping_interval} ||= 10;
+      $config{port} = $config{http_port};
+
+      require WWW::Slides::Talk;
+      $config{talk} = WWW::Slides::Talk->new(%config);
+   } ## end if (!exists $config{talk...
+
+   # Daemonise
+   require POSIX;
+   POSIX::setsid();    # not a must IMHO: or die "setsid: $!";
+   chdir '/';
+   close STDOUT;
+   close STDERR unless $config{debug};
+   close STDIN;
+   $SIG{PIPE} = 'IGNORE';    # For stray connections
+
+   # Run talk
+   $config{talk}->run();
+
+   exit 0;
+} ## end sub _launch_server
+
+sub spawn_server {
+   my ($config_href) = @_;
+   croak "expected HASH ref as input parameter"
+     unless ref($config_href) eq 'HASH';
+   my %config = %$config_href;
+
+   # First, let's see if we have all we need, which is little
+   if (!exists $config{talk}) {
+      croak "nowhere to take the slides from, provide a 'slides' parameter"
+        unless exists $config{slides};
+
+      croak "please provide either a 'controller' or a 'controller_port'"
+        unless exists($config{controller})
+        || exists($config{controller_port});
+
+      croak "please provide an 'http_port' to listen to"
+        unless $config{http_port};
+   } ## end if (!exists $config{talk...
+
+   # Here the iato comes
+   my $pid = fork();
+   die "could not fork(): $!"  unless defined $pid;    # error
+   _launch_server($config_href) unless $pid;            # child
+   sleep(1);                                           # father
+   return $pid;
+} ## end sub spawn_server
+
+1;    # Magic true value required at end of module
 __END__
 
 =head1 NAME
@@ -28,116 +102,275 @@ WWW::Slides - serve presentations on the Web
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.3
+This document describes WWW::Slides version 0.0.4
 
 
 =head1 SYNOPSIS
 
-    use WWW::Slides;
+   # It can be as simple as this:
+   use WWW::Slides qw( spawn_server );
+   my $pid = spawn_server(
+      {
+         slides          => \@slide_filenames, 
+         http_port       => 50505,
+         controller_port => 50506,
+      }
+   );
 
-=for l'autore, da riempire:
-   Qualche breve esempio con codice che mostri l'utilizzo più comune.
-   Questa sezione sarà quella probabilmente più letta, perché molti
-   utenti si annoiano a leggere tutta la documentazione, per cui
-   è meglio essere il più educativi ed esplicativi possibile.
+    
   
   
 =head1 DESCRIPTION
 
-=for l'autore, da riempire:
-   Fornite una descrizione completa del modulo e delle sue caratteristiche.
-   Aiutatevi a strutturare il testo con le sottosezioni (=head2, =head3)
-   se necessario.
-
 This module will eventually be a facade for using the variuous modules
-available in this library. Hold on for more docs!
+available in this library. For this reason, this module will mainly be
+function-oriented.
 
+=head2 Spawning Servers
 
-=head1 INTERFACE 
+The C<spawn_server()> sub will spawn a talk for you, providing sensible
+defaults. You can override each of them, of course. The spawned server
+is a daemon, with root directory set to C</>, closed filehandles, etc.
 
-=for l'autore, da riempire:
-   Scrivete una sezione separata che elenchi i componenti pubblici
-   dell'interfaccia del modulo. Questi normalmente sono formati o
-   dalle subroutine che possono essere esportate, o dai metodi che
-   possono essere chiamati su oggetti che appartengono alle classi
-   fornite da questo modulo.
+You can provide your fully built WWW::Slides::Talk object (or equivalent)
+to the function; in this case, you're only actually using the
+I<daemonising> property of the function itself.
 
-
-=head1 DIAGNOSTICS
-
-=for l'autore, da riempire:
-   Elencate qualunque singolo errore o messaggio di avvertimento che
-   il modulo può generare, anche quelli che non "accadranno mai".
-   Includete anche una spiegazione completa di ciascuno di questi
-   problemi, una o più possibili cause e qualunque rimedio
-   suggerito.
-
+It's much easier to use the function with a minimum of required parameters
+and let the code do its work, though. At the very basic level, you should
+provide at least the following parameters:
 
 =over
 
-=item C<< Error message here, perhaps with %s placeholders >>
+=item slides
 
-[Descrizione di un errore]
+the slides to serve. The easier approach here is pass a reference to an
+array of filenames of HTML files, and let the code load them and figure
+out how to put them into separated slides.
 
-=item C<< Another error message here >>
+=item http_port
 
-[Descrizione di un errore]
+where the server should listen for incoming connections from browsers.
 
-[E così via...]
+=item controller_port
+
+where the server should listen for incoming TCP connections from
+speakers.
 
 =back
 
 
+So, the basic invocation is as simple as this:
+
+   use WWW::Slides qw( spawn_server );
+   my $pid = spawn_server(
+      {
+         slides          => \@slide_filenames, 
+         http_port       => 50505,
+         controller_port => 50506,
+      }
+   );
+
+In this case, browsers should point to C<http://server.address:50505/>
+and speakers should connect to port C<50506>. That's it.
+
+The WWW::Slides system has a minimum integration with a logging system.
+It should work seamlessly with Log::Log4perl, but you're not obliged to
+use it; if you don't have it, it's ok even if you want to actually
+log something, because there is a minimal implementation of the relevant
+part of Log::Log4perl. If you have a C<$logger> object that conforms to
+Log::Log4perl (and it's easy to conform to it), you can pass it and
+have logs sent to it:
+
+   use WWW::Slides qw( spawn_server );
+   use Log::Log4perl qw( get_logger );
+   # ... initialise Log::Log4perl...
+
+   my $logger = get_logger();
+   my $pid = spawn_server(
+      {
+         slides          => \@slide_filenames, 
+         http_port       => 50505,
+         controller_port => 50506,
+         logger          => $logger,
+      }
+   );
+
+In case all you want is to send log messages on standard error, just
+say that you want to C<debug> and the code will happily build up a
+logger for you behind the scenes:
+
+   use WWW::Slides qw( spawn_server );
+   my $pid = spawn_server(
+      {
+         slides          => \@slide_filenames, 
+         http_port       => 50505,
+         controller_port => 50506,
+         debug           => 1,
+      }
+   );
+
+See all the options for C<spawn_server> in the L<INTERFACE> section.
+
+
+=head1 INTERFACE 
+
+=head2 B<my $pid = spawn_server($config_hash_ref);>
+
+This function lets you spawn a Talk server with a minimum of energy.
+The server 'daemonizes' itself, avoiding the double-fork but making
+all the other steps (changing the current directory, calling setsid(),
+closing handles, etc.).
+
+It gets its parameters through an hash reference containing them. 
+The parameters are listed in the following list, note that those
+indicated as 'mandatory' are not actually mandatory, because they
+will be ignored if the C<talk> parameter is provided.
+
+
+=over
+
+=item accepts_detaches
+
+When unset, the talk server will not accept detaches, i.e. all attendees
+will stick to the main slide served by the talk.
+
+On the other hand, when users can detach and actually detach themselves,
+they do not follow the "mainstream" presentation, but can wander on their
+own.
+
+This parameter is optional, defaults to true.
+
+
+=item controller
+
+If you provide a controller, this controller should adhere to the
+controller interface in WWW::Slides::Controller::Single. If you just
+need to have a TCP controller, skip this parameter and let the sub
+do its work, setting the TCP port with the C<controller_port> parameter.
+On the other hand, if you have your smart controller go ahead.
+
+Either this or C<controller_port> are mandatory.
+
+
+=item controller_port
+
+If all you need is just a basic TCP-based controller, fill in this
+parameter with the port the controller should bind to, it's all that
+you need. WWW::Slides::Controller::TCP will be invoked for you behind
+the scenes.
+
+Either this or C<controller> are mandatory.
+
+
+=item debug
+
+When set, STDERR will not be closed and a suitable logger will be built
+for you if you don't provide one.
+
+
+=item http_port
+
+This parameter sets the port to which the spawned server will listen
+for incoming connections from browsers.
+
+It is mandatory.
+
+
+=item logger
+
+You can pass a reference to a logger object, e.g. a Log::Log4perl object.
+
+This parameter is optional. Defaults to 'no logger' unless C<debug>
+is set, in which case a logger is built up for you to log on STDERR.
+
+
+=item must_book
+
+When set, the spawned server will accept only client connections for
+booked attendees. See L<WWW::Slides::Talk> for details.
+
+This parameter is optional and defaults to false.
+
+
+=item ping_interval
+
+At least every C<ping_interval> some data are sent to the client
+browser, in order to keep the TCP connection up.
+
+This parameter is optional, default is 10 seconds.
+
+
+=item slides
+
+You can pass variuos things through this parameter:
+
+=over
+
+=item
+
+an object conforming to the WWW::Slides::SlideShow interface;
+
+=item
+
+a filehandle;
+
+=item
+
+a filename;
+
+=item
+
+a reference to an array of filenames.
+
+=back
+
+In the last three cases, a WWW::Slides::SlideShow object will be built
+up behind the scenes, and the parameter will be passed to the C<read()>
+method. Refer to L<WWW::Slides::SlideShow> for details about it.
+
+This parameter is mandatory.
+
+
+=item talk
+
+if you provide this parameter, you don't have to provide anything else
+(except C<debug>, if you want). This is the object that will be used
+as talk, most probably a WWW::Slides::Talk or something with a C<run()>
+method. In this case, you take all the burden of building up a suitable
+talk.
+
+
+=back
+
+
+=head1 DIAGNOSTICS
+
+The functions will balk (ehr, C<croak>) at you if you don't provide
+enough parameters or something wrong happens. The given error should
+be meaningful by itself.
+
+
 =head1 CONFIGURATION AND ENVIRONMENT
 
-=for l'autore, da riempire:
-   Una spiegazione completa di qualunque sistema di configurazione
-   utilizzato dal modulo, inclusi i nomi e le posizioni dei file di
-   configurazione, il significato di ciascuna variabile di ambiente
-   utilizzata e proprietà che può essere impostata. Queste descrizioni
-   devono anche includere dettagli su eventuali linguaggi di configurazione
-   utilizzati.
-  
 WWW::Slides requires no configuration files or environment variables.
 
 
 =head1 DEPENDENCIES
 
-=for l'autore, da riempire:
-   Una lista di tutti gli altri moduli su cui si basa questo modulo,
-   incluse eventuali restrizioni sulle relative versioni, ed una
-   indicazione se il modulo in questione è parte della distribuzione
-   standard di Perl, parte della distribuzione del modulo o se
-   deve essere installato separatamente.
+WWW::Slides has virtually no dependency by itself, apart the non-core
+semi-standard module C<version>. If you let the
+functions do their work automatically, you will probably bump into
+the dependencies of the various modules in the WWW::Slides distribution.
 
-None.
 
 
 =head1 INCOMPATIBILITIES
-
-=for l'autore, da riempire:
-   Una lista di ciascun modulo che non può essere utilizzato
-   congiuntamente a questo modulo. Questa condizione può verificarsi
-   a causa di conflitti nei nomi nell'interfaccia, o per concorrenza
-   nell'utilizzo delle risorse di sistema o di programma, o ancora
-   a causa di limitazioni interne di Perl (ad esempio, molti dei
-   moduli che utilizzano filtri al codice sorgente sono mutuamente
-   incompatibili).
 
 None reported.
 
 
 =head1 BUGS AND LIMITATIONS
-
-=for l'autore, da riempire:
-   Una lista di tutti i problemi conosciuti relativi al modulo,
-   insime a qualche indicazione sul fatto che tali problemi siano
-   plausibilmente risolti in una versione successiva. Includete anche
-   una lista delle restrizioni sulle funzionalità fornite dal
-   modulo: tipi di dati che non si è in grado di gestire, problematiche
-   relative all'efficienza e le circostanze nelle quali queste possono
-   sorgere, limitazioni pratiche sugli insiemi dei dati, casi
-   particolari che non sono (ancora) gestiti, e così via.
 
 No bugs have been reported.
 
