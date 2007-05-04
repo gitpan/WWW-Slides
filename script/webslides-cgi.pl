@@ -1,83 +1,71 @@
 #!/opt/perl/bin/perl
+# Put your own correct shebang line above!!!
+
 use strict;
 use warnings;
 use CGI qw( :standard );
 use English qw( -no_match_vars );
-use version; my $VERSION = qv('0.0.4');
+use version; my $VERSION = qv('0.0.5');
 use WWW::Slides::Client::TCP;
+use WWW::Slides qw( spawn_server );
 
 my %config = (
-   hport   => 50505,
-   cport   => 50506,
-   chost   => 'localhost',
+   hport => 50505,
+   cport => 50506,
+   chost => 'localhost',
 );
 
 # Script implementation here
-my $client = eval {
-   WWW::Slides::Client::TCP->new(
-      port => $config{cport},
-      host => $config{chost},
-   );
-};
-if ($EVAL_ERROR) {    # Auto-create if applicable
-   spawn_server()
-     if $config{chost} =~ /\A(?: localhost | 127.0.0.1 )\z/mxs;
-   $client = WWW::Slides::Client::TCP->new(
-      port => $config{cport},
-      host => $config{chost},
-   );
-} ## end if ($EVAL_ERROR)
+# Try to connect to an existing presentation on given command port...
+my $client = eval { get_client() };
 
-# Honor commands
-my $outcome = execute_commands();
+# Command execution pre-check, either for quit or start
+my $command = param('command') || '';
+if ($command eq 'quit') {
+   $client->quit() if $client;
+   $client = undef;
+}
+elsif ((!$client) && ($command eq 'start')) {
+   start_server();
+   $client = get_client(); # Re-try to connect
+} ## end elsif ((!$client) && ($command...
 
-# Print out situation and handles
-print {*STDOUT} header(), start_html("Simple WWW::Slides Controller");
+# Other commands execution and page rendering
+print_starter();
+if (!$client) {
+   print qq{<p><a href="?command=start">Start</a></p>};
+}
+else {
+   my $outcome = execute_commands();
+   my ($slide_number, $total_slides) = $client->get_current();
 
-print "last command: $outcome\n<hr>\n" if $outcome;
-print qq{<a href="?">Home</a><br />\n};
-
-my $slide_number = $client->get_current();
-print {*STDOUT} join ' ', linked_command('first'),
-  linked_command('previous'), $slide_number, linked_command('next'),
-  linked_command('last');
-
-print {*STDOUT} "
-   <table border=1>
-      <tr>
-         <td>Id</td>
-         <td>Address</td>
-         <td>Status</td>
-         <td>Slide</td>
-      </tr>
-";
-my $count = 0;
-for my $attendee ($client->get_attendees()) {
-   ++$count;
-   my $attach;
-   if ($attendee->{is_attached}) {
-      $attach =
-        'attached ('
-        . linked_command('detach', target => $attendee->{id}) . ')';
-   }
-   else {
-      $attach =
-        'detached ('
-        . linked_command('attach', target => $attendee->{id}) . ')';
-
-   } ## end else [ if ($attendee->{is_attached...
-   print {*STDOUT} "
-      <tr>
-         <td>$count</td>
-         <td>$attendee->{peer_address}</td>
-         <td>$attach</td>
-         <td>$attendee->{current_slide}</td>
-      </tr>
-   ";
-} ## end for my $attendee ($client...
-print {*STDOUT} "\n   </table>\n", linked_command('quit');
-
+   print_navigation_bar($slide_number, $total_slides);
+   print {*STDOUT} "<br />last command: $outcome\n<br />" if $outcome;
+   print_attendees_list($total_slides);
+} ## end else [ if (!$client)
 print end_html();
+
+#-----------  FUNCTIONS  --------------------------------------------------
+
+sub get_client {
+   return WWW::Slides::Client::TCP->new(
+      port => $config{cport},
+      host => $config{chost},
+   );
+} ## end sub get_client
+
+sub transition_display {
+   my ($slide_number, $total, $code) = @_;
+   return join ' ', linked_command('first', '«', target => $code),
+     linked_command('previous', '&lt;', target => $code), qq{
+         <form style="display: inline">
+            <input type="hidden" name="command" value="show">
+            <input type="hidden" name="target" value="$code" >
+            <input type="text" name="slide" value="$slide_number" size="4">
+         </form> / $total
+     }, linked_command('next', '&gt;', target => $code),
+     linked_command('last', '»', target => $code);
+} ## end sub transition_display
 
 sub execute_commands {
    my $command = param('command') or return;
@@ -87,61 +75,127 @@ sub execute_commands {
          my $cmd = $client->can($command) or return;
          $client->$cmd(@targets);
       },
-      'quit' => sub { return $client->quit(); sleep 1; }
+      'quit' => sub { return $client->quit(); sleep 1; },
+      'show' => sub {
+         my $slide_no = param('slide') || 1;
+         my @targets = split /,/, param('target') || '';
+         $client->show($slide_no, @targets);
+      },
    );
    $actions{$_} = $actions{targetted} for qw(
-      first last previous next attach detach
+     first last previous next attach detach
    );
    return unless exists $actions{$command};
    return $actions{$command}->();
-}
+} ## end sub execute_commands
 
 sub linked_command {
-   my ($command, %params) = @_;
+   my ($command, $name, %params) = @_;
+   $name = $command unless defined $name;
    my $cmd = join ';', "command=$command", map {
       my $value = $params{$_};
       my $val = ref($value) ? join(',', @$value) : $value;
       "$_=$val";
    } keys %params;
-   return qq{<a href="?$cmd">$command</a>};
+   return qq{<a href="?$cmd">$name</a>};
 } ## end sub linked_command
 
-sub spawn_server {
-   my $pid = fork();
-   die "could not fork(): $!" unless defined $pid;
-   sleep(1) && return if $pid;    # father
+sub print_starter {
+   my $refresh_uri = url();
+   print {*STDOUT} header(),
+     start_html(
+      -title => "WWW::Slides Controller",
+      -head  =>
+        meta({-http_equiv => 'refresh', -content => "10; $refresh_uri"})
+     ),
+     h1('WWW::Slides Controller');
 
-   require WWW::Slides::SlideShow;
-   require WWW::Slides::Talk;
-   require WWW::Slides::Controller::STDIO;
-   require WWW::Slides::Controller::TCP;
-   require POSIX;
+} ## end sub print_starter
 
-   # Daemonise
-   chdir '/';
-   close STDOUT;
-   close STDERR;
-   close STDIN;
-   POSIX::setsid() or die "setsid: $!";
-   $SIG{PIPE} = 'IGNORE'; # Dunno why, but...
+sub print_navigation_bar {
+   my ($slide_number, $total_slides) = @_;
+   print {*STDOUT}
+     qq{<a href="?">Refresh</a> <a href="?command=quit">Quit</a> - };
+   print {*STDOUT} transition_display($slide_number, $total_slides);
+} ## end sub print_navigation_bar
 
-   # On with the (slide)show
-   my $slide_show = WWW::Slides::SlideShow->new();
-   $slide_show->read($config{sfile} || \*DATA);
+sub print_attendees_list {
+   my ($total_slides) = @_;
 
-   my $controller =
-     WWW::Slides::Controller::TCP->new(port => $config{cport});
+   my @attendees = $client->get_attendees();
+   if (@attendees) {
 
-   my $talk = WWW::Slides::Talk->new(
-      controller => $controller,
-      port       => $config{hport},
-      slide_show => $slide_show,
-      must_book  => $config{must_book},
-   );
-   $talk->run();
+      print {*STDOUT} p('Connected attendees...');
+      print {*STDOUT} <<"END_OF_TABLE_START" ;
+         <table border=1>
+            <tr>
+               <td>Id</td>
+               <td>Address</td>
+               <td>Status</td>
+               <td>Slide</td>
+            </tr>
+END_OF_TABLE_START
 
-   exit 0;
-} ## end sub spawn_server
+      my $count = 0;
+      for my $attendee ($client->get_attendees()) {
+         ++$count;
+         my ($attach, $slide);
+         if ($attendee->{is_attached}) {
+            $attach =
+                'attached ('
+              . linked_command('detach', undef, target => $attendee->{id})
+              . ')';
+            $slide = "$attendee->{current_slide} / $total_slides";
+         } ## end if ($attendee->{is_attached...
+         else {
+            $attach =
+                'detached ('
+              . linked_command('attach', undef, target => $attendee->{id})
+              . ')';
+            $slide = transition_display($attendee->{current_slide},
+               $total_slides, $attendee->{id});
+         } ## end else [ if ($attendee->{is_attached...
+         print {*STDOUT} <<"END_OF_TABLE_LINE" ;
+            <tr>
+               <td>$count</td>
+               <td>$attendee->{peer_address}</td>
+               <td>$attach</td>
+               <td>$slide</td>
+            </tr>
+END_OF_TABLE_LINE
+
+      } ## end for my $attendee ($client...
+      print {*STDOUT} "\n   </table>\n";
+   } ## end if (@attendees)
+   else {
+      print {*STDOUT} "<p>no one is connected...</p>\n";
+   }
+} ## end sub print_attendees_list
+
+sub start_server {
+   return unless $config{chost} =~ /\A(?: localhost | 127.0.0.1 )\z/mxs;
+
+   my $slides = $config{sfile};
+   $slides = \@ARGV if @ARGV;
+   if (!defined $slides) {
+      my $data = '';
+      while (<DATA>) {
+         last if /\A __END__ \s*\z/msx;
+         $data .= $_;
+      }
+      $slides = \$data;
+   } ## end if (!defined $slides)
+   spawn_server(
+      {
+         slides          => $slides,
+         controller_port => $config{cport},
+         http_port       => $config{hport},
+         debug           => $config{debug},
+         must_book       => $config{must_book},
+      }
+     )
+     or die "could not spawn server: $!";
+} ## end sub start_server
 
 __DATA__
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
@@ -201,15 +255,70 @@ __END__
 webslides-cgi.pl - demo CGI script for WWW::Slides
 
 
-=head1 USAGE
+=head1 INSTALLATION AND USAGE
 
-Put into your cgi-bin directory, adjust paths if you haven't installed
-the modules and go!
+Installation is straighforward:
+
+=over
+
+=item
+
+put the script into your cgi-bin directory, with correct permissions
+(e.g. execution);
+
+=item
+
+B<change the shebang line>, the provided one will almost surely fail for
+you;
+
+=item
+
+if you haven't installed the modules, put the necessary C<use lib '...';>
+commands;
+
+=item
+
+enjoy :)
+
+=back
+
 
 =head1 DESCRIPTION
 
 This CGI implements a sub-set of the commands accessible via console.pl.
-See documentation for console.pl.
+
+If no slide server is listening on the given command port, you will see
+a plain page with the option to start one. You know where you should
+click.
+
+If the CGI succeeds in connecting to an existing slide server, you will
+be presented with a rich*COUGH*basic interface to do something.
+
+On the top you find the main speaker controls:
+
+=over
+
+=item Refresh
+
+you can trigger a page refresh, even if it auto-refreshes every 10 seconds;
+
+=item Quit
+
+to quit the presentation (shuts the slide server down);
+
+=item transition handles
+
+with which you can go to the first, previous, exact, next, last slide.
+
+=back
+
+Just below this navigation you'll find the list of connected attendees,
+if any. When an attendee is "attached" the slide number will be equal
+to that set by the speaker above. If you "detach" an attendee you will
+enable a per-attendee micro-menu with the same options as above (for
+transitions only). You'll be able to sort it out.
+
+See documentation for console.pl for further details.
   
 
 =head1 AUTHOR
@@ -290,5 +399,4 @@ questa negazione di garanzia e la piena responsabilità per qualsiasi
 tipo di danno, di qualsiasi natura, possa derivarne.
 
 =cut
-
 

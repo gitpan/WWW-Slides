@@ -1,23 +1,69 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         WWW-Slides
-version:      v0.0.4
-version_from: lib/WWW/Slides.pm
-installdirs:  site
+---
+name: WWW-Slides
+version: 0.0.6
+author:
+  - 'Flavio Poletti <flavio [at] polettix [dot] it>'
+abstract: serve presentations on the Web
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
 requires:
-    Carp:                          0
-    Digest::MD5:                   0
-    English:                       0
-    HTTP::Response:                0
-    IO::Handle:                    0
-    IO::Select:                    0
-    IO::Socket:                    0
-    Object::InsideOut:             0
-    Socket:                        0
-    Test::Exception:               0
-    Test::MockObject:              0
-    Test::More:                    0
-    version:                       0
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.30
+  Carp: 0
+  Digest::MD5: 0
+  English: 0
+  File::Basename: 0
+  HTTP::Response: 0
+  IO::Handle: 0
+  IO::Select: 0
+  IO::Socket: 0
+  Object::InsideOut: 0
+  Socket: 0
+  Test::Exception: 0
+  Test::MockObject: 0
+  Test::More: 0
+  Test::Output: 0
+  version: 0
+provides:
+  WWW::Slides:
+    file: lib/WWW/Slides.pm
+    version: 0.0.5
+  WWW::Slides::Attendee:
+    file: lib/WWW/Slides/Attendee.pm
+    version: 0.0.4
+  WWW::Slides::BasicLogger:
+    file: lib/WWW/Slides/BasicLogger.pm
+    version: 0.0.5
+  WWW::Slides::Client::Base:
+    file: lib/WWW/Slides/Client/Base.pm
+    version: 0.0.5
+  WWW::Slides::Client::TCP:
+    file: lib/WWW/Slides/Client/TCP.pm
+    version: 0.0.3
+  WWW::Slides::Controller::Multiple:
+    file: lib/WWW/Slides/Controller/Multiple.pm
+    version: 0.0.3
+  WWW::Slides::Controller::STDIO:
+    file: lib/WWW/Slides/Controller/STDIO.pm
+    version: 0.0.3
+  WWW::Slides::Controller::Single:
+    file: lib/WWW/Slides/Controller/Single.pm
+    version: 0.0.5
+  WWW::Slides::Controller::TCP:
+    file: lib/WWW/Slides/Controller/TCP.pm
+    version: 0.0.4
+  WWW::Slides::Controller::UDP:
+    file: lib/WWW/Slides/Controller/UDP.pm
+    version: 0.0.3
+  WWW::Slides::SlideShow:
+    file: lib/WWW/Slides/SlideShow.pm
+    version: 0.0.4
+  WWW::Slides::SlideTracker:
+    file: lib/WWW/Slides/SlideTracker.pm
+    version: 0.0.3
+  WWW::Slides::Talk:
+    file: lib/WWW/Slides/Talk.pm
+    version: 0.0.5
+generated_by: Module::Build version 0.2808
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

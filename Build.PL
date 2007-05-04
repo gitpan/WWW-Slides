@@ -6,7 +6,7 @@ my $builder = Module::Build->new(
    module_name       => 'WWW::Slides',
    license           => 'perl',
    dist_author       => 'Flavio Poletti <flavio [at] polettix [dot] it>',
-   dist_version_from => 'lib/WWW/Slides.pm',
+   dist_version_from => 'VERSION',
    requires          => {
       'Test::More'        => 0,
       'version'           => 0,
@@ -21,6 +21,8 @@ my $builder = Module::Build->new(
       'Socket'            => 0,
       'Test::Exception'   => 0,
       'Test::MockObject'  => 0,
+      'Test::Output'      => 0,
+      'File::Basename'    => 0,
    },
    add_to_cleanup => ['WWW-Slides-*'],
    test_files     => 't/*.t t/*/*.t',

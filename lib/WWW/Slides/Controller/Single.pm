@@ -1,7 +1,7 @@
 package WWW::Slides::Controller::Single;
 {
 
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.5');
 
    use warnings;
    use strict;
@@ -95,7 +95,7 @@ package WWW::Slides::Controller::Single;
       },
       'show' => sub {
          my ($self, $command, $talk) = @_;
-         $talk->show($command->{slide});
+         $talk->show($command->{slide}, @{$command->{target}});
          $self->output("200 OK\n");
       },
 
@@ -131,7 +131,9 @@ package WWW::Slides::Controller::Single;
       # Requests from far
       'get_current' => sub {
          my ($self, $command, $talk) = @_;
-         $self->output('200 OK current=' . $talk->get_current() . "\n");
+         my $current = $talk->get_current();
+         my $total   = $talk->get_total();
+         $self->output("200 OK current=$current;total=$total\n");
       },
 
       'get_attendees' => sub {

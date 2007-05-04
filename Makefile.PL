@@ -5,8 +5,8 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
    NAME          => 'WWW::Slides',
    AUTHOR        => 'Flavio Poletti <flavio [at] polettix [dot] it>',
-   VERSION_FROM  => 'lib/WWW/Slides.pm',
-   ABSTRACT_FROM => 'lib/WWW/Slides.pm',
+   VERSION_FROM  => 'VERSION',
+   ABSTRACT_FROM => 'VERSION',
    PL_FILES      => {},
    PREREQ_PM     => {
       'Test::More'        => 0,
@@ -22,6 +22,8 @@ WriteMakefile(
       'Socket'            => 0,
       'Test::Exception'   => 0,
       'Test::MockObject'  => 0,
+      'Test::Output'      => 0,
+      'File::Basename'    => 0,
    },
    dist  => {COMPRESS => 'gzip -9f', SUFFIX => 'gz',},
    clean => {FILES    => 'WWW-Slides-*'},

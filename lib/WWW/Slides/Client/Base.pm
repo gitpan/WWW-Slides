@@ -1,13 +1,14 @@
 package WWW::Slides::Client::Base;
 {
 
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.5');
 
    use warnings;
    use strict;
    use Carp;
    use English qw( -no_match_vars );
    use IO::Select;
+   use IO::Handle;
 
    use Object::InsideOut;
 
@@ -18,14 +19,18 @@ package WWW::Slides::Client::Base;
    my @out_handle : Field    # controller handle, commands
      : Std(Name => 'out_handle', Private => 1)
      : Arg(Name => 'out_handle', Mandatory => 1);
+   my @timeout : Field      # Timeout for receiving data
+     : Std(Name => 'timeout') : Get(Name => 'timeout')
+     : Arg(Name => 'timeout', Default => 10);
 
-   sub send_command {
+   sub raw_send {
       my $self = shift;
-      my ($command) = @_;
+      $self->get_out_handle()->print(@_);
+   }
+   sub receive {
+      my $self = shift;
 
-      $self->get_out_handle()->print($command . "\n");
-
-      my $timeout  = undef;
+      my $timeout  = $self->timeout();
       my $response = '';
       my $in       = $self->get_in_handle();
       my $sel      = IO::Select->new($in);
@@ -36,10 +41,18 @@ package WWW::Slides::Client::Base;
             last;
          }
          $response .= $data;
-         $timeout = 0.1;
+         $timeout = 0.1; # lower timeout for following data
       } ## end while ($sel->can_read($timeout...
 
       return $response;
+   }
+   
+   sub send_command {
+      my $self = shift;
+      my ($command) = @_;
+      $command .= "\n" unless substr($command, -1) eq "\n";
+      $self->raw_send($command);
+      return $self->receive();
    } ## end sub send_command
 
    #-------------- COMMAND EXECUTION FRAMEWORK -------------------------
@@ -104,8 +117,10 @@ package WWW::Slides::Client::Base;
       my $self = shift;
       my $res  = $self->send_command('command=get_current');
       return unless defined $res;
-      my ($slide_no) = $res =~ m{(\d+) \s* \z}mxs;
-      return $slide_no;
+      my ($slide_no, $total) = 
+         $res =~ m{200 \s+ OK \s+ current=(\d+) ; total=(\d+) \s* \z}mxs;
+      return $slide_no unless wantarray;
+      return ($slide_no, $total);
    } ## end sub get_current
 
    sub get_attendees {

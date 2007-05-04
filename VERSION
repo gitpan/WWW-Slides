@@ -1,0 +1,7 @@
+use version; our $VERSION = qv('0.0.6');
+
+__END__
+
+=head1 NAME
+
+WWW::Slides - serve presentations on the Web

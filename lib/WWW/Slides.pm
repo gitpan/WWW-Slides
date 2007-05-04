@@ -1,6 +1,6 @@
 package WWW::Slides;
 
-use version; our $VERSION = qv('0.0.4');
+use version; our $VERSION = qv('0.0.5');
 
 use warnings;
 use strict;
@@ -122,8 +122,8 @@ This document describes WWW::Slides version 0.0.4
   
 =head1 DESCRIPTION
 
-This module will eventually be a facade for using the variuous modules
-available in this library. For this reason, this module will mainly be
+This module contains facade functions to easily use the various modules
+available in this library. For this reason, this module is
 function-oriented.
 
 =head2 Spawning Servers

@@ -1,6 +1,6 @@
 package WWW::Slides::BasicLogger;
 {
-   use version; our $VERSION = qv('0.0.4');
+   use version; our $VERSION = qv('0.0.5');
 
    use warnings;
    use strict;
@@ -48,7 +48,7 @@ __END__
 
 =head1 NAME
 
-WWW::Slides::BasicLogger - serve presentations on the Web
+WWW::Slides::BasicLogger - basic replacement for Log::Log4perl
 
 
 =head1 VERSION

@@ -5,7 +5,7 @@ package WWW::Slides::Talk;
    #   use diagnostics;
    use strict;
    use Carp;
-   use version; our $VERSION = qv('0.0.4');
+   use version; our $VERSION = qv('0.0.5');
    use Object::InsideOut;
    use IO::Socket;
    use IO::Select;
@@ -409,6 +409,7 @@ package WWW::Slides::Talk;
    }
 
    sub get_current { return shift->tracker()->current(); }
+   sub get_total   { return shift->slide_show()->id_last(); }
 
    sub get_attendees_details {
       my $self = shift;

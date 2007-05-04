@@ -1,13 +1,19 @@
 Revision history for WWW-Slides
 
-0.0.1  Tue Apr 24 15:02:50 2007
-       Initial release.
+0.0.6  Thu May 03 18:57:00 2007
+       Added unit tests for Client library.
+       Added unit tests for BasicLogger.
+       Added dependencies for newly used modules (inside tests).
+       Fixed a bug with parameter handling in WS::Client::TCP
+       Added a couple of methods to WS::Client::Base
+       Added timeout handling to WS::Client::Base
 
-0.0.3  Wed May 02 09:44:00 2007
-       Fixed missing modules in dependencies.
-       Fixed bug in client library.
-       Fixed support for booking, now working.
-       First draft of documentation for some modules.
+0.0.5  Thu May 03 11:35:00 2007
+       Changed order of Changes.
+       Moved version and abstract in VERSION file, added to the package.
+       Hope to remember to use Module::Build to make distribution packages.
+       Updated script/webslides-cgi.pl in shape and documentation.
+       Fixed bug in show() method for restricted targets.
 
 0.0.4  Wed May 02 13:04:00 2007
        Updated docs in scripts.
@@ -15,3 +21,12 @@ Revision history for WWW-Slides
        Implemented spawn_server in WWW::Slides, made console.pl use it.
        Fixed minor bugs on the way.
        Other stuff I really don't remember.
+
+0.0.3  Wed May 02 09:44:00 2007
+       Fixed missing modules in dependencies.
+       Fixed bug in client library.
+       Fixed support for booking, now working.
+       First draft of documentation for some modules.
+
+0.0.1  Tue Apr 24 15:02:50 2007
+       Initial release.

@@ -22,6 +22,10 @@ package WWW::Slides::Client::TCP;
    sub _init : PreInit {
       my $self = shift;
       my ($args) = @_;
+      $args->{host} = 'localhost' unless exists $args->{host};
+
+      croak q{missing mandatory parameter 'port'}
+         unless exists $args->{port};
 
       my $sock = IO::Socket::INET->new(
          PeerAddr => $args->{host},
