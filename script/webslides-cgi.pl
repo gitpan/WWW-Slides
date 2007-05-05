@@ -11,6 +11,7 @@ use WWW::Slides qw( spawn_server );
 
 my %config = (
    hport => 50505,
+   hhost => 'localhost',
    cport => 50506,
    chost => 'localhost',
 );
@@ -42,6 +43,9 @@ else {
    print_navigation_bar($slide_number, $total_slides);
    print {*STDOUT} "<br />last command: $outcome\n<br />" if $outcome;
    print_attendees_list($total_slides);
+   print {*STDOUT} qq{<p>Serving slides }
+      . qq{<a href="http://$config{hhost}:$config{hport}/" target="_blank">}
+      . qq{here</a></p>\n};
 } ## end else [ if (!$client)
 print end_html();
 
@@ -202,49 +206,184 @@ __DATA__
                       "http://www.w3.org/TR/html4/loose.dtd">
 <html>
    <head>
-      <title>Here I come!</title>
+      <title>WWW::Slides Sample presentation</title>
+      <style>
+         div.slide {
+            border: 1px dotted #777;
+            width: 640px;
+            padding: 0 1em 1em 1em;
+         }
+         div.sx { float: left; display: inline; }
+         div.dx { float: right; display: inline; }
+         div.clear { clear: both; }
+      </style>
    </head>
    <body>
+   
+   <div id="slide1" class="slide">
+      <h1>WWW::Slides - Web Presentations</h1>
+      <p>
+         WWW::Slides is a simple system for serving slides on the web.
+         Just save them as HTML files, with a few rules, and you'll be
+         able to present them on the web, e.g. in a conference call!
+      </p>
+      <div class="sx">
+         <img src="http://www.polettix.it/images/WWW-Slides/Goggles_Guy.png">
+      </div>
+      <div class="sx">
+         We're going to see...
+         <ul>
+            <li>the basic idea</li>
+            <li>how it works</li>
+            <li>what you need</li>
+         </ul>
+      </div>
+      <div class="clear"></div>
+   </div>
 
-        <div id="slide0">
-            <h1>This is slide 1</h1>
-Here you can find the contents for slide #1. You can insert images:
-<p>
-<img src="http://www.polettix.it/cgi-bin/wiki.pl/download/PerlFlowers.png"
-     alt="Perl flowers" title="Perl flowers">
-<p>as well as other elements:
-<ul>
-<li>a</li>
-<li>simple</li>
-<li>list</li>
-</ul>
+   <div id="slide2" class="slide">
+      <h1>The basic idea</h1>
+      <div class="sx" style="width: 340px; padding: 0 1em;">
+         <p>
+         Showing slides means that a <em>speaker</em> controls what's on
+         the <em>screen</em> of each talk attendee - yes, you're thinking
+         about <em>push</em> technologies. Just note that a <em>push</em>
+         can be faked by a very long <em>pull</em>!
+         </p>
+         <p>
+         Combining <strong>HTTP Streaming</strong> and <strong>CSS</strong>
+         it's possible to control what the browser renders at any given time:
+         </p>
+      </div>
+      <div style="margin-left: 380px">
+         <img src="http://www.polettix.it/images/WWW-Slides/fox.jpg">
+      </div>
+      <div class="sx">
+         <ul>
+            <li>
+               <em>HTTP Streaming</em> means that the server does not
+               close the HTTP connection, but keeps it open and sends
+               some data from time to time, just to prevent the browser
+               from timing out;
+            </li>
+            <li>
+               each slide is put inside a single <tt>&lt;div&gt;</tt>
+               with a unique id, so that we can refer to each slide
+               by its div id.
+               Decent CSS support is needed to ensure that slides can
+               be hidden-shown by simply sending a suitable 
+               <tt>&lt;style&gt;</tt> sequence regarding the right
+               div
+            </li>
+         </ul>
+      </div>
 
-         </div>
+      <div class="clear"></div>
+   </div>
 
-        <div id="slide1">
+   <div id="slide3" class="slide">
+      <h1>How it works</h1>
+      <div class="sx">
+         <img src="http://www.polettix.it/images/WWW-Slides/WWW-Slides-SampleArch.png">
+      </div>
+      <div class="sx" style="width: 350px; padding: 0 1em;">
+         <ul>
+            <li>
+               A main <em>Talk</em> server is started; it handles all
+               the needed synchronisation stuff.
+            </li>
+            <li> 
+               On the <em>Attendee</em> side, it listens to a
+               given port for incoming HTTP requests from the browsers.
+               When they connect, the currently selected slide is served
+               and the connection kept open;
+            </li>
+            <li>
+               On the <em>Speaker</em> side, there are various means to
+               control the evolution of the presentation. One of the
+               simplest is having the <em>Talk</em> as a standalone server
+               accepting incoming TCP control connections on a given
+               port.
+            </li>
+            <li>
+               When the speaker issues a transition command (e.g. "go to the
+               next slide"), the slide is sent to the clients using the
+               still-open HTTP connections.
+            </li>
+         </ul>
+      </div>
+      <div class="clear"></div>
+   </div>
 
-<h1>This is slide 2</h1>
-The contents are completely different here.
-<hr>
-<p>
-<img src="http://www.polettix.it/cgi-bin/wiki.pl/download/Soffietto-soluzione.png"
-     alt="solution" title="solution">
+   <div id="slide4" class="slide">
+      <h1>What you need</h1>
+      <div class="sx">
+         <img src="http://www.polettix.it/images/WWW-Slides/toolkit.png">
+      </div>
+      <div class="sx" style="width: 410px">
+         <ul>
+            <li>
+               As a <em>Curious</em>, you need to install
+               WWW::Slides and use the example applications (there is
+               a console-based one and a CGI-based one). Feedbacks
+               welcome! 
+            </li>
+            <li>
+               As a <em>Programmer</em>, you need to understand WWW::Slides 
+               model and force me to write the documentation.
+            </li>
+            <li>
+               As <em>Speaker</em>, you need to put up your slides in a
+               more or less acceptable way. HTML files with not-too-fancy
+               formatting should be good. Moreover, you should know
+               in advance where your images will be placed, and use
+               absolute links.
+            </li>
+            <li> 
+               As an <em>Attendee</em>, you only need a browser with a
+               decent support for CSS. And - probably - you should be
+               able to HTTP-connect to non-standard ports.
+            </li>
+         </ul>
+      </div>
+      <div class="clear"></div>
+   </div>
 
-         </div>
+   <div id="slide5" class="slide">
+      <h1>That's all folks!</h1>
+      <div class="sx" style="width: 410px">
+         <ul>
+            <li>
+               I know... it's a rather dumb idea,
+               but it seems to work! Give me feedback at
+               <a href="mailto:flavio@polettix.it">flavio@polettix.it</a>
+               if you want.
+            </li>
+            <li>
+               There are things that have not been included here:
+               personalised transitions for each attendee (like they
+               were looking at the slides in their hands instead of
+               the screen), restricting access to authorised clients,
+               etc. But it's all there, implemented!
+            </li>
+            <li>
+               I wish to thank <a href="http://openclipart.org/">the Open Clip Art Library</a>
+               and <a href="http://pdphoto.org/">PD Photo</a> for
+               the images, 
+               and <a href="http://perl.plover.com">Mark Jason Dominus</a>
+               for <a href="http://perl.plover.com/yak/presentation/">his
+               hints on preparing slides</a>.
+            </li>
+         </ul>
+      </div>
+      <div class="dx">
+         <img src="http://www.polettix.it/images/WWW-Slides/gorilla.png">
+      </div>
 
-        <div id="slide2">
+      <div class="clear"></div>
+   </div>
 
-<h1>This is slide 3</h1>
-The contents are completely different here, with respect to the other
-two pages.
-<hr>
-<p>
-<img src="http://www.polettix.it/cgi-bin/wiki.pl/download/Casa.png"
-     alt="solution" title="solution">
-<p>I live here!
-
-         </div>
-
+  
    </body>
 </html>
 

@@ -21,6 +21,7 @@ script/console.pl
 script/webslides-cgi.pl
 t/00.load.t
 t/pod.t
+t/MemoryFilehandle.pm
 t/Attendee/00.load.t
 t/Attendee/01.create.t
 t/Attendee/02.transition.t
@@ -33,12 +34,12 @@ t/BasicLogger/04.fake.t
 t/BasicLogger/03.stdout.t
 t/Client/00.load.t
 t/Client/01.create.t
+t/Client/02.traffic.t
+t/Client/03.get_commands.t
 t/Client/50.load-TCP.t
 t/Client/51.create.t
-t/Client/ClientTest.pm
 t/Client/52.traffic.t
-t/Client/03.get_commands.t
-t/Client/02.traffic.t
+t/Client/ClientTest.pm
 t/SlideShow/00.load.t
 t/SlideShow/01.can.t
 t/SlideShow/02.read.t

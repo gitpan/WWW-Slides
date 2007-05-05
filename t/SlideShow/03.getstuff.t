@@ -2,8 +2,7 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 1; # last test to print
-use Test::More 'no_plan';  # substitute with previous line when done
+use Test::More tests => 17; # last test to print
 use Test::Exception;
 
 my $module = 'WWW::Slides::SlideShow';

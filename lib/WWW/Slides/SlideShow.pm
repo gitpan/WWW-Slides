@@ -1,7 +1,6 @@
 package WWW::Slides::SlideShow;
 {
-
-   use version; our $VERSION = qv('0.0.4');
+   use version; our $VERSION = qv('0.0.7');
 
    use warnings;
    use strict;
@@ -30,34 +29,61 @@ package WWW::Slides::SlideShow;
    my @postamble : Field          # HTML/whatever postamble
      : Std(Name => 'postamble');
 
-   sub read_fh : Private {
+   sub read_line_by_line : Private {
       my $self = shift;
-      my ($fh) = @_;
+      my ($iterator) = @_;
 
       my $preamble;
-      while (<$fh>) {
+      while (defined $iterator->()) {
          $preamble .= $_;
          last if /<body/msxi;
       }
       $self->set_preamble($preamble);
 
       my @slides;
-      my $slide  = '';
-      my $div_id = '';
-      while (<$fh>) {
+      my $slide     = '';
+      my $div_id    = '';
+      my $div_depth = 0;
+      my $div_mark  = 0;
+      my $postamble = '';
+      while (defined $iterator->()) {
+         if (m{</body>}mxsi) {
+            $postamble = $_;
+            last;
+         }
          $slide .= $_;
+         if (m{<div[^>]*\sid="([^"]*)"}mxsi) {
+            $div_id   = $1;
+            $div_mark = $div_depth++;
+         }
+         elsif (m{<div}mxsi) {
+            ++$div_depth;
+         }
          if (m{</div>}mxsi) {
-            push @slides, {div_id => $div_id, slide => $slide};
-            $slide  = '';
-            $div_id = '';
-         }
-         elsif (m{<div[^>]*\sid="([^"]*)"}mxsi) {
-            $div_id = $1;
-         }
-      } ## end while (<$fh>)
+            if (--$div_depth == $div_mark) {
+               push @slides, {div_id => $div_id, slide => $slide};
+               $slide  = '';
+               $div_id = '';
+            }
+         } ## end if (m{</div>}mxsi)
+      } ## end while (defined $iterator->...
       $self->set_slides(\@slides);
 
+      $self->set_postamble($postamble . join('', $iterator->()));
+
       return;
+   } ## end sub read_line_by_line :
+
+   sub read_fh : Private {
+      my $self = shift;
+      my ($fh) = @_;
+
+      return $self->read_line_by_line(
+         sub {
+            return <$fh> if wantarray;
+            return $_ = <$fh>;
+         }
+      );
    } ## end sub read_fh :
 
    sub read {
@@ -67,23 +93,47 @@ package WWW::Slides::SlideShow;
       croak "undefined file to read slide show" unless defined $what;
 
       my ($fh, $was_mine);
-      if (ref $what eq 'SCALAR') {    # Straight string
-         open $fh, '<', $what
-           or croak "can't open in-memory filehandle: $OS_ERROR";
+      if (ref $what eq 'SCALAR') {    # Straight string, in-memory handle
          $self->set_filename('<string>');
+         eval { open $fh, '<', $what or die };    # The perl 5.8 way...
+
+         if ($EVAL_ERROR) {    # Try to use IO::String, if available...
+            eval {
+               require IO::String;
+               $fh = IO::String->new($$what);
+            };
+         } ## end if ($EVAL_ERROR)
+
+         # I really wouldn't fall back to this, because I've to
+         # split it all in advance, but this is the best I can think
+         # at the moment
+         if ($EVAL_ERROR) {
+
+            # split and re-insert newlines. I don't really mind that
+            # I could potentially add a newline to the final line.
+            my @lines = map { "$_\n" } split /\n/, $$what;
+            return $self->read_line_by_line(
+               sub {
+                  return splice @lines if wantarray;
+                  return $_ = shift @lines;
+               }
+            );
+         } ## end if ($EVAL_ERROR)
+
          $was_mine = 1;
       } ## end if (ref $what eq 'SCALAR')
       elsif (ref $what eq 'GLOB') {
-         $fh = $what;
          $self->set_filename('<filehandle>');
+         $fh = $what;
       }
       elsif (ref $what eq 'ARRAY') {    # One file per slide
+         $self->set_filename('<various-files>');
          return $self->read_slides(@$what);
       }
       else {
+         $self->set_filename($what);
          open $fh, '<', $what
            or croak "can't open('$what'): $OS_ERROR";
-         $self->set_filename($what);
          $was_mine = 1;
       } ## end else [ if (ref $what eq 'SCALAR')
 
@@ -107,7 +157,7 @@ package WWW::Slides::SlideShow;
       ');
 
       $self->set_postamble("\n</body></html>\n");
-      
+
       my @slides;
       for my $filename (@_) {
          my $text   = $self->read_slide($filename);
@@ -149,8 +199,8 @@ package WWW::Slides::SlideShow;
       };
       $parser->handler(start => $start_handler, 'tagname,self');
 
-      $parser->parse_file($filename) 
-         or die "could not parse '$filename': $OS_ERROR";
+      $parser->parse_file($filename)
+        or die "could not parse '$filename': $OS_ERROR";
       return $text;
    } ## end sub read_slide
 

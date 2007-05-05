@@ -1,6 +1,6 @@
 package WWW::Slides;
 
-use version; our $VERSION = qv('0.0.5');
+use version; our $VERSION = qv('0.0.7');
 
 use warnings;
 use strict;
@@ -102,7 +102,7 @@ WWW::Slides - serve presentations on the Web
 
 =head1 VERSION
 
-This document describes WWW::Slides version 0.0.4
+This document describes WWW::Slides version 0.0.7
 
 
 =head1 SYNOPSIS
@@ -122,7 +122,105 @@ This document describes WWW::Slides version 0.0.4
   
 =head1 DESCRIPTION
 
-This module contains facade functions to easily use the various modules
+WWW::Slides is a system for serving presentation on the web, with one 
+(or more) "speakers" controlling what's seen by a "vast" audience of 
+attendees. It relies on HTTP streaming and CSS in order to send different 
+slides and force browsers to show the correct one.
+
+WWW::Slides allows the creation of one or more talks that
+can be served via HTTP. You can start a basic HTTP server on a port
+of your choice, that allows browsers to connect in order to make them
+show slides. Moreover, you can retain control on the presentation using
+a simple controlling mechanism of your choice, more notably using a
+TCP connection.
+
+=head2 Distribution Overview
+
+At a higher level, there are three main areas of interest for the user:
+
+=over
+
+=item Viewing
+
+The browser connection management is handled by the L<WWW::Slides::Talk>
+class, which is also the central one. Each browser connecting is handled
+by a L<WWW::Slides::Attendee> object, but you don't actually have to know
+anything about it (unless you really do, of course). Usage by final users
+is quite straightforward, the only thing they have to do is use a browser
+with decent support for CSS towards the port where the C<Talk> is
+listening for incoming attendees.
+
+
+=item Control
+
+The control part gives the speaker(s) all the needed handles to perform
+slide transitions in a flexible way. Based on their I<attachment>
+status, a given attendee will follow the "main" slide or see a slide
+of her choice, much in the spirit of looking at the main presentation
+screen or at the notes in one's hands.
+
+Every L<WWW::Slides::Talk> object needs one controller, with an interface
+compatible with that of L<WWW::Slides::Control::Single>.
+The control part adopts a client-server model, and as such is split into
+two parts. 
+
+On the server side, the basic control class is
+L<WWW::Slides::Control::Single>, which interacts with a generic pair
+of filehandles (one for input, the other for output), parses incoming
+commands and applies them to the L<WWW::Slides::Talk> object. 
+
+Two modules are probably the most useful in this area: 
+L<WWW::Slides::Control::STDIO>, which uses C<STDIN>/C<STDOUT> for
+its operations, and L<WWW::Slides::Control::TCP>, which listens to a
+given port for incoming control connections, and allows the contemporary
+operation of multiple inputs (it is based on 
+L<WWW::Slides::Control::Multiple> for this).
+
+The last access point is L<WWW::Slides::Control::UDP>, which only allows 
+incoming commands (i.e. there is no return path) and has limited 
+functionality.
+
+The client side can be home-brewed (the protocol is quite simple, though
+not documented yet) or can be based on the client library coming with
+WWW::Slides. In particular, L<WWW::Slides::Client::Base> is the natural
+counterpart of L<WWW::Slides::Client::Single>, implementing all the
+methods needed for a successful interaction with the talk. To handle
+TCP controllers, a L<WWW::Slides::Client::TCP> subclass will conveniently
+set things up for you.
+
+
+=item Slides
+
+The third main area is the slides one. The model on which L<WWW::Slides>
+is based encapsulates slide management into two classes:
+L<WWW::Slides::SlideShow> and L<WWW::Slides::SlideTracker>. The former
+is the actual slide holder, some kind of repository which can
+be queried for various information (e.g. the contents of a slide,
+identifier for slide transition, etc.); the latter is a simple state
+holding object, that is used by L<WWW::Slides::Attendee> and
+L<WWW::Slides::Talk> to keep track of the current slide seen by the
+audience and by any single attendee.
+
+WWW::Slided is not a system for I<producing> slides, only to serve them.
+As such, L<WWW::Slides::SlideShow> is a minimal implementation of a
+loader class for some unknown slide format, and can be regarded as the
+weakest part of the distribution. On the other hand, the mechanism is
+quite simple, and it is also simple to extend L<WWW::Slides::SlideShow>
+(or re-implement it) to support various sources of slides.
+
+=back
+
+There is a (minimal) support for logging operations through a
+L<Log::Log4perl> interface. If you are not willing to install it (but
+you're encouraged to do it), there is a minimal implementation of
+its interface in L<WWW::Slides::BasicLogger>. By default, a simple
+C<STDERR>-only logger is installed, but you can use
+L<WWW::Slides::BasicLogger> to set up a fake logger if you want to
+shut logs up, or provide a full fledged C<Log::Log4perl> object
+if you want to use its powerful capabilities. It's really up to you.
+
+The last module in the distribution is the current one, which 
+contains facade functions to easily use the various modules
 available in this library. For this reason, this module is
 function-oriented.
 

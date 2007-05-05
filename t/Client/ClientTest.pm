@@ -1,6 +1,7 @@
 package ClientTest;
 use strict;
 use warnings;
+use version; our $VERSION = qv('0.0.7');
 
 use base 'Exporter';
 our @EXPORT_OK = qw( start_child_server echo get_stuff );
@@ -41,3 +42,5 @@ sub get_stuff {
    $fh->sysread(my $buffer, 1024);
    return $buffer;
 }
+
+1;

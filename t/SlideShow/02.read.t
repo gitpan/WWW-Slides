@@ -2,8 +2,7 @@
 use strict;
 use warnings;
 
-#use Test::More tests => 1; # last test to print
-use Test::More 'no_plan';  # substitute with previous line when done
+use Test::More tests => 7;    # last test to print
 use Test::Exception;
 
 my $module = 'WWW::Slides::SlideShow';
@@ -16,6 +15,7 @@ is($slide_show->filename(), '<filehandle>', 'filename set');
 
 seek DATA, 0, 0;
 my $data = do { local $/; <DATA> };
+
 lives_ok { $slide_show->read(\$data) } 'correctly reads from string';
 is($slide_show->filename(), '<string>', 'filename set');
 
@@ -31,7 +31,7 @@ SKIP: {
 
    lives_ok { $slide_show->read($filename) } 'correctly reads from file';
    is($slide_show->filename(), $filename, 'filename set');
-}
+} ## end SKIP:
 
 __DATA__
 <PREAMBLE STUFF HERE>

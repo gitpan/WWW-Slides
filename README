@@ -1,4 +1,4 @@
-WWW-Slides version 0.0.5
+WWW-Slides version 0.0.7
 
 WWW::Slides is (well, will be) a system for serving presentation on the
 web, with one (or more) "speakers" controlling what's seen by a
@@ -57,7 +57,6 @@ Quite a few. Core:
 * IO::Select
 * IO::Handle
 
-
 Will-be-core:
 
 * version
@@ -65,9 +64,21 @@ Will-be-core:
 Non-core:
 
 * Object::InsideOut
-* Term::ReadLine (if you want to use the basic console)
 * HTTP::Response (LWP)
 * Digest::MD5
+
+For testing:
+
+* Test::More
+* Test::Exception
+* Test::MockObject
+* Test::Output
+* File::Basename
+* IO::String (optional, needed only if in-memory filehandles are absent)
+
+For script/console.pl:
+
+* Term::ReadLine
 
 
 COPYRIGHT AND LICENCE

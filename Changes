@@ -1,5 +1,13 @@
 Revision history for WWW-Slides
 
+0.0.7  Fry May 04 09:27:00 2007
+       Expanded documentation in WWW::Slides
+       Updated dependencies in README
+       Made tests for Attendee skip when there's no infrastructure...
+       Updated example presentations embedded into script/*
+       Minor bug fixes
+       SlideShow now can avoid using in-memory filehandles when reading from a SCALAR reference.
+
 0.0.6  Thu May 03 18:57:00 2007
        Added unit tests for Client library.
        Added unit tests for BasicLogger.
