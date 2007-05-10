@@ -1,5 +1,14 @@
 Revision history for WWW-Slides
 
+0.0.8  Sun May 06 05:05:00 2007
+       Added tests for WS::Controller::Single
+       Made minor changes to WS::COntroller::Single to make it more rational
+       Added most of the documentation to WS::Controller::Single
+       Put number of tests in test files that still had 'no_plan'
+       Added support for both in and out in-memory filehandles in test lib
+       Adapted Attendee tests to new sub name in MemoryFilehandle test lib
+       Corrected MemoryFilehandle to correctly spot in-memory handles unavailability
+
 0.0.7  Fry May 04 09:27:00 2007
        Expanded documentation in WWW::Slides
        Updated dependencies in README

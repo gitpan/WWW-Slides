@@ -6,7 +6,7 @@ use Test::MockObject;
 
 use File::Basename qw( dirname );
 use lib dirname(__FILE__) . '/..';
-use MemoryFilehandle qw( in_memory_handle );
+use MemoryFilehandle qw( out_memory_handle );
 
 my $module = 'WWW::Slides::Attendee';
 require_ok($module);
@@ -17,7 +17,7 @@ throws_ok { $module->new() } qr/mandatory/msx,
 SKIP:
 {
    my $target;
-   my $fh = in_memory_handle($target);
+   my $fh = out_memory_handle($target);
    skip('Need in-memory filehandles or IO::String for these tests', 3)
      unless $fh;
 

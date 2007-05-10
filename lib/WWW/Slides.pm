@@ -1,6 +1,6 @@
 package WWW::Slides;
 
-use version; our $VERSION = qv('0.0.7');
+use version; our $VERSION = qv('0.0.8');
 
 use warnings;
 use strict;
@@ -313,7 +313,9 @@ See all the options for C<spawn_server> in the L<INTERFACE> section.
 
 =head1 INTERFACE 
 
-=head2 B<my $pid = spawn_server($config_hash_ref);>
+=over
+
+=item B<my $pid = spawn_server($config_hash_ref);>
 
 This function lets you spawn a Talk server with a minimum of energy.
 The server 'daemonizes' itself, avoiding the double-fork but making
@@ -321,14 +323,14 @@ all the other steps (changing the current directory, calling setsid(),
 closing handles, etc.).
 
 It gets its parameters through an hash reference containing them. 
-The parameters are listed in the following list, note that those
-indicated as 'mandatory' are not actually mandatory, because they
-will be ignored if the C<talk> parameter is provided.
 
+B<NOTE>: all parameters marked as 'mandatory' are ignored
+when the C<talk> parameter is present. So they are actually conditional
+ones.
 
 =over
 
-=item accepts_detaches
+=item B<accepts_detaches> (optional, defaults to true)
 
 When unset, the talk server will not accept detaches, i.e. all attendees
 will stick to the main slide served by the talk.
@@ -337,10 +339,8 @@ On the other hand, when users can detach and actually detach themselves,
 they do not follow the "mainstream" presentation, but can wander on their
 own.
 
-This parameter is optional, defaults to true.
 
-
-=item controller
+=item B<controller> (B<conditional>)
 
 If you provide a controller, this controller should adhere to the
 controller interface in WWW::Slides::Controller::Single. If you just
@@ -348,58 +348,55 @@ need to have a TCP controller, skip this parameter and let the sub
 do its work, setting the TCP port with the C<controller_port> parameter.
 On the other hand, if you have your smart controller go ahead.
 
-Either this or C<controller_port> are mandatory.
+This parameter is mandatory if C<controller_port> is absent.
 
 
-=item controller_port
+=item B<controller_port> (B<conditional>)
 
 If all you need is just a basic TCP-based controller, fill in this
 parameter with the port the controller should bind to, it's all that
 you need. WWW::Slides::Controller::TCP will be invoked for you behind
 the scenes.
 
-Either this or C<controller> are mandatory.
+This parameter is mandatory if C<controller> is absent.
 
 
-=item debug
+=item B<debug> (optional, defaults to false)
 
 When set, STDERR will not be closed and a suitable logger will be built
-for you if you don't provide one.
+for you if you don't provide one. Its value is evaluated in boolean
+context.
 
 
-=item http_port
+=item B<http_port> (B<mandatory>)
 
 This parameter sets the port to which the spawned server will listen
 for incoming connections from browsers.
 
-It is mandatory.
 
 
-=item logger
+=item B<logger> (optional, defaults to 'no logger')
 
 You can pass a reference to a logger object, e.g. a Log::Log4perl object.
 
-This parameter is optional. Defaults to 'no logger' unless C<debug>
+This parameter defaults to 'no logger' unless C<debug>
 is set, in which case a logger is built up for you to log on STDERR.
 
 
-=item must_book
+=item B<must_book> (optional, defaults to false)
 
 When set, the spawned server will accept only client connections for
 booked attendees. See L<WWW::Slides::Talk> for details.
 
-This parameter is optional and defaults to false.
 
 
-=item ping_interval
+=item B<ping_interval> (optional, defaults to 10 seconds)
 
 At least every C<ping_interval> some data are sent to the client
 browser, in order to keep the TCP connection up.
 
-This parameter is optional, default is 10 seconds.
 
-
-=item slides
+=item B<slides> (B<mandatory>)
 
 You can pass variuos things through this parameter:
 
@@ -427,10 +424,8 @@ In the last three cases, a WWW::Slides::SlideShow object will be built
 up behind the scenes, and the parameter will be passed to the C<read()>
 method. Refer to L<WWW::Slides::SlideShow> for details about it.
 
-This parameter is mandatory.
 
-
-=item talk
+=item B<talk> (optional, defaults to building up with other parameters)
 
 if you provide this parameter, you don't have to provide anything else
 (except C<debug>, if you want). This is the object that will be used
@@ -438,6 +433,8 @@ as talk, most probably a WWW::Slides::Talk or something with a C<run()>
 method. In this case, you take all the burden of building up a suitable
 talk.
 
+
+=back
 
 =back
 

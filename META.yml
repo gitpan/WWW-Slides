@@ -1,6 +1,6 @@
 ---
 name: WWW-Slides
-version: 0.0.7
+version: 0.0.8
 author:
   - 'Flavio Poletti <flavio [at] polettix [dot] it>'
 abstract: serve presentations on the Web
@@ -26,7 +26,7 @@ requires:
 provides:
   WWW::Slides:
     file: lib/WWW/Slides.pm
-    version: 0.0.7
+    version: 0.0.8
   WWW::Slides::Attendee:
     file: lib/WWW/Slides/Attendee.pm
     version: 0.0.4
@@ -47,7 +47,7 @@ provides:
     version: 0.0.3
   WWW::Slides::Controller::Single:
     file: lib/WWW/Slides/Controller/Single.pm
-    version: 0.0.5
+    version: 0.0.8
   WWW::Slides::Controller::TCP:
     file: lib/WWW/Slides/Controller/TCP.pm
     version: 0.0.4
