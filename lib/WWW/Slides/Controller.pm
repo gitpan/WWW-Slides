@@ -1,4 +1,4 @@
-package WWW::Slides::Controller::Single;
+package WWW::Slides::Controller;
 {
 
    use version; our $VERSION = qv('0.0.9');
@@ -8,68 +8,204 @@ package WWW::Slides::Controller::Single;
    use Carp;
    use English qw( -no_match_vars );
 
-   use Object::InsideOut qw( WWW::Slides::Controller );
+   use Object::InsideOut;
 
    # Module implementation here
-   my @in_handle : Field    # controller handle
-     : Std(Name => 'in_handle', Private => 1)
-     : Arg(Name => 'in_handle', Mandatory => 1);
-   my @out_handle : Field : Std(Name => 'out_handle', Private => 1)
-     : Arg(Name => 'out_handle');
+   my @selector : Field    # For selector handling...
+     : Set(Name => 'set_selector') : Get(Name => 'selector');
+   my @buffer : Field : Std(Name => 'buffer', Private => 1);
 
-   sub is_alive {
+   sub balk_for_not_overriding : Private {
       my $self = shift;
-      return defined($self->get_in_handle());
-   }
+      my ($name) = @_;
+      $name = '' unless defined $name;
+      croak "$name: this method must be overridden";
+   } ## end sub balk_for_not_overriding :
 
-   sub shut_down {
-      my $self = shift;
-      $self->release_selector() if $self->selector();
-      $self->get_in_handle()->close() if $self->get_in_handle();
-      $self->set_in_handle(undef);
-      $self->get_out_handle()->close() if $self->get_out_handle();
-      $self->set_out_handle(undef);
+   my %init_args : InitArgs = ( selector => '' );
+   sub _init : Init {
+      my ($self, $args) = @_;
+      $self->set_buffer('');
+      $self->set_selector($args->{selector}) if $args->{selector};
       return;
    }
+   sub is_alive  { shift->balk_for_not_overriding('is_alive'); }
+   sub shut_down { return }
 
-   sub set_selector {
-      my ($self, $selector) = @_;
-      $selector->add($self->get_in_handle()) if $self->is_alive();
-      $self->SUPER::set_selector($selector);
+   # set_selector() auto-implemented
+   # selector() auto-implemented
+   sub release_selector { return; }
+
+   sub owns            { balk_for_not_overriding('owns'); }
+   sub get_input_chunk { balk_for_not_overriding('get_input_chunk'); }
+   sub output          { balk_for_not_overriding('output'); }
+
+   #-------------- COMMAND EXECUTION FRAMEWORK -------------------------
+   my %commands = (
+      'nothing' => sub {
+         print "nothing\n";
+      },
+
+      # Slide transition management
+      'first' => sub {
+         my $self = shift;
+         my ($command, $talk) = @_;
+         $talk->show_first(@{$command->{target}});
+         $self->output("200 OK\n");
+      },
+      'last' => sub {
+         my $self = shift;
+         my ($command, $talk) = @_;
+         $talk->show_last(@{$command->{target}});
+         $self->output("200 OK\n");
+      },
+      'next' => sub {
+         my $self = shift;
+         my ($command, $talk) = @_;
+         $talk->show_next(@{$command->{target}});
+         $self->output("200 OK\n");
+      },
+      'previous' => sub {
+         my $self = shift;
+         my ($command, $talk) = @_;
+         $talk->show_previous(@{$command->{target}});
+         $self->output("200 OK\n");
+      },
+      'show' => sub {
+         my ($self, $command, $talk) = @_;
+         $talk->show($command->{slide}, @{$command->{target}});
+         $self->output("200 OK\n");
+      },
+
+      # Attendee management
+      'book' => sub {
+         my $self = shift;
+         my ($command, $talk) = @_;
+         $talk->book($command->{code});
+         $self->output("200 OK\n");
+      },
+      'attach' => sub {
+         my ($self, $command, $talk) = @_;
+         $talk->attach(@{$command->{target}});
+         $self->output("200 OK\n");
+      },
+      'detach' => sub {
+         my ($self, $command, $talk) = @_;
+         $talk->detach(@{$command->{target}});
+         $self->output("200 OK\n");
+      },
+      'clamp' => sub {
+         my ($self, $command, $talk) = @_;
+         $talk->clamp();
+         $self->output("200 OK\n");
+      },
+      'loose' => sub {
+         my ($self, $command, $talk) = @_;
+         $talk->loose();
+         $self->output("200 OK\n");
+      },
+
+      # Requests from far
+      'get_current' => sub {
+         my ($self, $command, $talk) = @_;
+         my $current = $talk->get_current();
+         my $total   = $talk->get_total();
+         $self->output("200 OK current=$current;total=$total\n");
+      },
+
+      'get_attendees' => sub {
+         my ($self, $command, $talk) = @_;
+         my $output = join "\n", map {
+            my @elements;
+            while (my ($k, $v) = each %$_) {
+               $v = '' unless defined $v;
+               push @elements, "$k=$v";
+            }
+            join ';', @elements;
+         } $talk->get_attendees_details();
+         $self->output("200 OK\n$output\n");
+      },
+
+      # Ehr... quit
+      'quit' => sub {
+         my $self = shift;
+         my ($command, $talk) = @_;
+         $talk->quit();
+         $self->output("200 OK\n");
+      },
+   );
+
+   sub execute_commands {
+      my $self = shift;
+      my ($fh, $talk) = @_;
+
+      # Execute each command
+      $self->execute_command($_, $talk) for $self->get_commands();
+
       return;
-   }
+   } ## end sub execute_commands
 
-   sub release_selector {
+   sub get_commands {
       my $self = shift;
-      return unless $self->is_alive();
-      $self->selector()->remove($self->get_in_handle());
+
+      # Get new stuff from filehandle, extract full commands
+      if (defined(my $newstuff = $self->get_input_chunk())) {
+
+         # Get new stuff and append to current buffer
+         my $buffer = $self->get_buffer() . $newstuff;
+
+         my @full_lines = split /\n/, $buffer;
+
+         # Set buffer with the incomplete last line, if any
+         my $remaining = '';
+         $remaining = pop @full_lines unless substr($buffer, -1) eq "\n";
+         $self->set_buffer($remaining);
+
+         # Return parsed commands
+         return map { $self->parse_command($_) } @full_lines;
+      } ## end if (defined(my $newstuff...
+
+      # Otherwise, there's no more input for us, we shut_down and leave
+      $self->shut_down();
       return;
-   }
+   } ## end sub get_commands
 
-   sub owns {
+   sub execute_command {
       my $self = shift;
-      my ($fh) = @_;
-      return unless $self->is_alive();
-      return unless defined $fh;
-      return $self->get_in_handle() == $fh;
-   } ## end sub owns
+      my ($command, $talk) = @_;
 
-   sub output {
-      my $self = shift;
-      croak 'object is not alive, no output possible'
-         unless $self->is_alive();
-      my $fh = $self->get_out_handle() or return;
-      print {$fh} @_;
+      my $cmd = $command->{command};
+      $cmd = '' unless defined $cmd;
+      if (exists $commands{$cmd}) {
+         eval { $commands{$cmd}->($self, $command, $talk); };
+         if ($EVAL_ERROR) {
+            $self->output("500 error executing '$cmd': $EVAL_ERROR\n");
+         }
+      } ## end if (exists $commands{$cmd...
+      else {
+         $self->output("500 command '$cmd' not supported\n");
+      }
+
       return;
-   }
+   } ## end sub execute_command
 
-   sub get_input_chunk {
-      my $self = shift;
-      croak 'not alive, cannot input' unless $self->is_alive();
-      $self->get_in_handle()->sysread(my $newstuff, 4096);
-      return unless defined $newstuff and length $newstuff;
-      return $newstuff;
-   }
+   sub parse_command {
+      my $self             = shift;
+      my ($command_string) = @_;
+      my $command          = {
+         map {
+            my ($k, $v) = split /=/;
+            $v = '' unless defined $v;
+            $k => $v;
+           } split /[\s;]+/,
+         $command_string
+      };
+      $command->{target} =
+        defined($command->{target})
+        ? [split /,/, $command->{target}]
+        : [];
+      return $command;
+   } ## end sub parse_command
 }
 
 1;    # Magic true value required at end of module

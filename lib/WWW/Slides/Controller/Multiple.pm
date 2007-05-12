@@ -1,13 +1,13 @@
 package WWW::Slides::Controller::Multiple;
 {
 
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.9');
 
    use warnings;
    use strict;
    use Carp;
 
-   use Object::InsideOut;
+   use Object::InsideOut qw( WWW::Slides::Controller );
 
    # Other recommended modules (uncomment to use):
    #  use IO::Prompt;
@@ -21,13 +21,23 @@ package WWW::Slides::Controller::Multiple;
    my @controllers : Field # Repository for handles
       : Std(Name => 'controllers', Private => 1)
       : Get(Name => 'controllers', Private => 1);
-   my @selector : Field   # To update the selector
-      : Std(Name => 'selector') 
-      : Get(Name => 'selector');
 
    sub _init : Init {
       my $self = shift;
       $self->set_controllers([]);
+   }
+
+   sub is_alive {
+      my $self = shift;
+      $self->remove(grep { ! $_->is_alive() } @{ $self->controllers() });
+      return 1;  # By definition
+   }
+
+   sub shut_down {
+      my $self = shift;
+      $self->release_selector();
+      $self->SUPER::shut_down();
+      return;
    }
 
    sub add {
@@ -36,7 +46,7 @@ package WWW::Slides::Controller::Multiple;
       my $controllers = $self->controllers();
       for my $controller (@_) {
          push @$controllers, $controller;
-         $controller->set_selector($selector);
+         $controller->set_selector($selector) if $selector;
       }
       return;
    }
@@ -47,15 +57,25 @@ package WWW::Slides::Controller::Multiple;
       my @remaining = @{$self->controllers()};
       for my $controller (@_) {
          @remaining = grep { $_ ne $controller } @remaining;
-         $controller->release_selector($selector);
+         $controller->release_selector($selector) if $selector;
       }
       $self->set_controllers(\@remaining);
       return;
    }
 
+   sub set_selector {
+      my $self = shift;
+      my ($selector) = @_;
+      $self->SUPER::set_selector($selector);
+      $_->set_selector($selector) for @{ $self->controllers() || [] };
+      return;
+   }
+
    sub release_selector {
       my $self = shift;
-      $self->remove(@{$self->controllers()});
+      my $selector = $self->selector() or return;
+      $_->release_selector($selector) for @{ $self->controllers() || [] };
+      $self->SUPER::release_selector();
       return;
    }
 
@@ -64,6 +84,9 @@ package WWW::Slides::Controller::Multiple;
       my ($fh) = @_;
       return defined $self->get_owner($fh);
    }
+
+   # get_input_chunk not overridden, cannot be called
+   # output not overridden, cannot be called
 
    sub get_owner : Private {
       my $self = shift;
@@ -80,12 +103,6 @@ package WWW::Slides::Controller::Multiple;
       return $self->get_owner($fh)->execute_commands($fh, $talk);
    } ## end sub get_commands
 
-   sub is_alive {
-      my $self = shift;
-      $self->remove(grep { ! $_->is_alive() } @{ $self->controllers() });
-      return 1;  # By definition
-   }
-
 }
 1;    # Magic true value required at end of module
 __END__
@@ -97,7 +114,7 @@ WWW::Slides::Controller::Multiple - handle multiple controllers as one
 
 =head1 VERSION
 
-This document describes WWW::Slides::Controller::Multiple version 0.0.3
+This document describes WWW::Slides::Controller::Multiple version 0.0.9
 
 
 =head1 SYNOPSIS

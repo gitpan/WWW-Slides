@@ -1,5 +1,16 @@
 Revision history for WWW-Slides
 
+0.0.9  Thu May 10 10:26:00 2007
+       Moved command execution stuff inside WS::Controller, not the real base (abstract) class
+       Adapted WS::Controller::Single
+       Adapted WS::Controller::Multiple
+       Adapted WS::Controller::TCP
+       Added tests for new base class, mainly taken from Single tests
+       Added tests for WS::Controller::Multiple
+       Added tests for WS::Controller::STDIO
+       Added tests for WS::Controller::TCP
+       Added tests for WS::Controller::UDP
+
 0.0.8  Sun May 06 05:05:00 2007
        Added tests for WS::Controller::Single
        Made minor changes to WS::COntroller::Single to make it more rational

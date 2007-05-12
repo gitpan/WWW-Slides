@@ -1,11 +1,12 @@
 package WWW::Slides::Controller::TCP;
 {
 
-   use version; our $VERSION = qv('0.0.4');
+   use version; our $VERSION = qv('0.0.9');
 
    use warnings;
    use strict;
    use Carp;
+   use English qw( -no_match_vars );
 
    use Object::InsideOut qw( WWW::Slides::Controller::Multiple );
    use WWW::Slides::Controller::Single;
@@ -20,12 +21,13 @@ package WWW::Slides::Controller::TCP;
 
    sub _init : Init {
       my $self = shift;
-      $self->set_door(IO::Socket::INET->new(
+      my $sock = IO::Socket::INET->new(
          Proto => 'tcp',
          LocalPort => $self->port(),
          Listen => 3,
          ReuseAddr => 1,
-      ));
+      ) or croak "cannot create socket: $OS_ERROR";
+      $self->set_door($sock);
       return;
    }
 
@@ -50,7 +52,7 @@ package WWW::Slides::Controller::TCP;
       return ($fh == $self->get_door()) || $self->SUPER::owns($fh);
    }
 
-   sub execute_commands { # Manage command-oriented buffering
+   sub execute_commands { # A command on the door is actually a connection
       my $self = shift;
       my ($fh, $talk) = @_;
       if ($fh == $self->get_door()) {
@@ -75,7 +77,7 @@ WWW::Slides::Controller::TCP - multiple controller based on TCP
 
 =head1 VERSION
 
-This document describes WWW::Slides::Controller::TCP version 0.0.3
+This document describes WWW::Slides::Controller::TCP version 0.0.9
 
 
 =head1 SYNOPSIS

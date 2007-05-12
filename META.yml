@@ -1,6 +1,6 @@
 ---
 name: WWW-Slides
-version: 0.0.8
+version: 0.0.9
 author:
   - 'Flavio Poletti <flavio [at] polettix [dot] it>'
 abstract: serve presentations on the Web
@@ -39,21 +39,24 @@ provides:
   WWW::Slides::Client::TCP:
     file: lib/WWW/Slides/Client/TCP.pm
     version: 0.0.3
+  WWW::Slides::Controller:
+    file: lib/WWW/Slides/Controller.pm
+    version: 0.0.9
   WWW::Slides::Controller::Multiple:
     file: lib/WWW/Slides/Controller/Multiple.pm
-    version: 0.0.3
+    version: 0.0.9
   WWW::Slides::Controller::STDIO:
     file: lib/WWW/Slides/Controller/STDIO.pm
-    version: 0.0.3
+    version: 0.0.9
   WWW::Slides::Controller::Single:
     file: lib/WWW/Slides/Controller/Single.pm
-    version: 0.0.8
+    version: 0.0.9
   WWW::Slides::Controller::TCP:
     file: lib/WWW/Slides/Controller/TCP.pm
-    version: 0.0.4
+    version: 0.0.9
   WWW::Slides::Controller::UDP:
     file: lib/WWW/Slides/Controller/UDP.pm
-    version: 0.0.3
+    version: 0.0.9
   WWW::Slides::SlideShow:
     file: lib/WWW/Slides/SlideShow.pm
     version: 0.0.7

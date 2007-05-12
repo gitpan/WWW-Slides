@@ -1,18 +1,22 @@
 package WWW::Slides::Controller::STDIO;
 {
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.9');
 
    use warnings;
    use strict;
    use Carp;
 
    use Object::InsideOut qw( WWW::Slides::Controller::Single );
+   use IO::Handle;
 
    # Module implementation here
    sub _init : PreInit {    # Generate the UDP socket
       my $self = shift;
       my ($args) = @_;
+      binmode STDIN;
       $args->{in_handle} = \*STDIN;
+      autoflush STDOUT 1;
+      binmode STDOUT;
       $args->{out_handle} = \*STDOUT;
    } ## end sub _init :
 }
@@ -26,7 +30,7 @@ WWW::Slides::Controller::STDIO - control talks via STDIO
 
 =head1 VERSION
 
-This document describes WWW::Slides::Controller::STDIO version 0.0.3
+This document describes WWW::Slides::Controller::STDIO version 0.0.9
 
 
 =head1 SYNOPSIS

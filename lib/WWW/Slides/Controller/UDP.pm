@@ -1,10 +1,11 @@
 package WWW::Slides::Controller::UDP;
 {
-   use version; our $VERSION = qv('0.0.3');
+   use version; our $VERSION = qv('0.0.9');
 
    use warnings;
    use strict;
    use Carp;
+   use English qw( -no_match_vars );
 
    use Object::InsideOut qw( WWW::Slides::Controller::Single );
    use IO::Socket;
@@ -17,10 +18,12 @@ package WWW::Slides::Controller::UDP;
    sub _init : PreInit {    # Generate the UDP socket
       my $self = shift;
       my ($args) = @_;
+      croak "missing mandatory argument 'port'"
+         unless exists $args->{port};
       $args->{in_handle} = IO::Socket::INET->new(
          Proto     => 'udp',
          LocalPort => $args->{port},
-      );
+      ) or croak "cannot create socket: $OS_ERROR";
    } ## end sub _init :
 }
 1;                          # Magic true value required at end of module
@@ -33,7 +36,7 @@ WWW::Slides::Controller::UDP - simple UDP-based controller for WWW::Slides
 
 =head1 VERSION
 
-This document describes WWW::Slides::Controller::UDP version 0.0.1
+This document describes WWW::Slides::Controller::UDP version 0.0.9
 
 
 =head1 SYNOPSIS

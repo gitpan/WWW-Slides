@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::Exception;
 use Test::MockObject;
 
@@ -14,6 +14,7 @@ throws_ok { $module->new() } qr/mandatory.*in_handle/mxs,
 my $object;
 lives_ok { $object = $module->new(in_handle => 1) }
   'correctly builds with mandatory parameter';
+ok($object->is_alive(), 'object is alive after building up');
 
 my $selector;
 throws_ok { $module->new(in_handle => 1, selector => 1) }
